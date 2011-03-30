@@ -20,23 +20,24 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include "list.hh"
-
 namespace lilos {
 
 #define NORETURN void __attribute__((noreturn))
 
 typedef uint8_t *stack_t;
 
-typedef list::List<stack_t> TaskList;
-
 typedef NORETURN (*main_t)();
 
 class Task {
-  TaskList::Item _listItem;
+  stack_t _sp;
+  Task *_next;
 
 public:
   Task(main_t entry, uint8_t *stack, size_t stackSize);
+
+  stack_t &sp() { return _sp; }
+  Task *next() { return _next; }
+
   void schedule();
 };
 

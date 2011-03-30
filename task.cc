@@ -2,8 +2,8 @@
 
 namespace lilos {
 
-static TaskList tasks;
-static TaskList::Item *currentTaskItem = 0;
+static Task *firstTask = 0;
+static Task *currentTask = 0;
 
 // For saveContext/restoreContext, inlining is not just an optimization:
 // it's critical to correctness.  This attribute lets us mandate it.
@@ -90,8 +90,8 @@ static ALWAYS_INLINE void restoreContext(stack_t sp) {
 }
 
 NORETURN startTasking() {
-  currentTaskItem = tasks.head();
-  restoreContext(currentTaskItem->value());
+  currentTask = firstTask;
+  restoreContext(currentTask->sp());
   
   // gcc is smart enough to recognize that this function does, in fact, return.
   // The code below is a total hack to fool it into allowing NORETURN here.
@@ -100,16 +100,16 @@ NORETURN startTasking() {
   while (1);
 }
 void yield() {
-  saveContext(&currentTaskItem->value());
-  TaskList::Item *next = currentTaskItem->next();
-  if (!next) next = tasks.head();
-  currentTaskItem = next;
-  restoreContext(next->value());
+  saveContext(&currentTask->sp());
+  Task *next = currentTask->next();
+  if (!next) next = firstTask;
+  currentTask = next;
+  restoreContext(next->sp());
 }
 
 #define _PUSH(x) *(sp--) = (uint8_t) x
 static const uint8_t kSregIntEnabled = 0x00;  // Not really enabled, for now.
-Task::Task(main_t entry, uint8_t *stack, size_t stackSize) : _listItem(0) {
+Task::Task(main_t entry, uint8_t *stack, size_t stackSize) : _sp(0) {
   uint8_t *sp = stack + stackSize - 1;
 
   // Code "return address" of entry routine
@@ -127,12 +127,13 @@ Task::Task(main_t entry, uint8_t *stack, size_t stackSize) : _listItem(0) {
   _PUSH(28);
   _PUSH(29);
 
-  _listItem.value() = sp;
+  _sp = sp;
 }
 #undef _PUSH
 
 void Task::schedule() {
-  tasks.insert(&_listItem);
+  _next = firstTask;
+  firstTask = this;
 }
 
 }  // namespace lilos
