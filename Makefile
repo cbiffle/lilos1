@@ -24,7 +24,7 @@ clean:
 	-rm -f main.elf main.hex
 	-rm -f *.o
 
-main.elf: main.o task.o
+main.elf: main.o task.o usart.o time.o
 	$(GXX) $(LDFLAGS) -o $@ $^
 
 %.o: %.cc
