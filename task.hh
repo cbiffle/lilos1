@@ -6,12 +6,13 @@
  *
  * General use:
  *  1. Create one or more Tasks.
- *  2. Call startTasking.
- *  3. To pass control to another task, call yield().
+ *  2. Call schedule() for each task.
+ *  3. Call startTasking.
+ *  4. To pass control to another task, call yield().
  *
- * New tasks can be created at any time, simply by constructing a Task object.
- * The task will be in the rotation at the next call to yield() or
- * startTasking().
+ * New tasks can be created at any time, simply by constructing a Task object
+ * and calling schedule().  The task will be in the rotation at the next call to
+ * yield() or startTasking().
  *
  * Tasks cannot be *removed* from scheduling at this time.
  */
@@ -36,6 +37,7 @@ class Task {
 
 public:
   Task(main_t entry, uint8_t *stack, size_t stackSize);
+  void schedule();
 };
 
 NORETURN startTasking();

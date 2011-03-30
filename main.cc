@@ -42,5 +42,8 @@ int main() {
   led.setValue(false);
   _delay_ms(3000);
 
+  flashTask.schedule();
+  delayTask.schedule();
+
   lilos::startTasking();
 }

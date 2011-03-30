@@ -128,8 +128,11 @@ Task::Task(main_t entry, uint8_t *stack, size_t stackSize) : _listItem(0) {
   _PUSH(29);
 
   _listItem.value() = sp;
-  tasks.insert(&_listItem);
 }
 #undef _PUSH
+
+void Task::schedule() {
+  tasks.insert(&_listItem);
+}
 
 }  // namespace lilos
