@@ -31,12 +31,18 @@ typedef NORETURN (*main_t)();
 class Task {
   stack_t _sp;
   Task *_next;
+  enum {
+    RUNNABLE = 0,
+    WAITING = 1,
+  } _status;
 
 public:
   Task(main_t entry, uint8_t *stack, size_t stackSize);
 
   stack_t &sp() { return _sp; }
   Task *next() { return _next; }
+
+  bool runnable() { return _status == RUNNABLE; }
 
   void schedule();
 };
