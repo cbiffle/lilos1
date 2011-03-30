@@ -5,8 +5,8 @@
 #include "usart.hh"
 #include "task.hh"
 
-static volatile uint8_t _txCount;
-static volatile const char *_txSource;
+static volatile uint8_t _txCount = 0;
+static volatile const char *_txSource = 0;
 
 void usart_init_raw(uint16_t ubrr) {
   UBRR0H = ubrr >> 8;
@@ -18,8 +18,10 @@ void usart_init_raw(uint16_t ubrr) {
          | (3 << UCSZ00);  // 8 data bits.
 }
 
-void usart_send(char b) {
-  usart_write(&b, 1);
+void usart_send(uint8_t b) {
+  while (!(UCSR0A & (1 << UDRE0)));
+
+  UDR0 = b;
 }
 
 void usart_write(const char *src, uint8_t count) {
