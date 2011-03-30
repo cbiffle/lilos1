@@ -19,7 +19,8 @@ public:
     Item *_next;
   public:
     inline Item(Elt value) : _value(value), _next(0) {}
-    inline Item *next() { return _next; }
+    inline Item *&next() { return _next; }
+    inline Elt &value() { return _value; }
   };
 
 private:
@@ -29,7 +30,7 @@ public:
   inline List() : _head(0) {}
 
   inline void insert(Item *it) {
-    it->next = _head;
+    it->next() = _head;
     _head = it;
   }
 

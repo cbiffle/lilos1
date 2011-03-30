@@ -2,9 +2,10 @@
 
 namespace lilos {
 
-volatile task_handle_t CurrentTask = 0;
+static TaskList tasks;
+static TaskList::Item *currentTaskItem = 0;
 
-static inline void saveContext() {
+static inline void saveContext(uint8_t **sp) {
   asm volatile (
     "push r0 \n\t"
     "in r0, __SREG__ \n\t"
@@ -31,24 +32,20 @@ static inline void saveContext() {
     "push r28 \n\t"
     "push r29 \n\t"
     // Stack pointer
-    "lds r26, CurrentTask \n\t"
-    "lds r27, CurrentTask + 1 \n\t"
     "in r0, __SP_L__ \n\t"
-    "st X+, r0 \n\t"
+    "st %a0, r0 \n\t"
     "in r0, __SP_H__ \n\t"
-    "st X+, r0 \n\t"
+    "std %a0+1, r0 \n\t"
+  : /* no output */
+  : "e"(sp)
   );
 }
 
-static inline void restoreContext() {
+static inline void restoreContext(uint8_t *sp) {
   asm volatile (
     // Stack pointer
-    "lds r26, CurrentTask \n\t"
-    "lds r27, CurrentTask + 1 \n\t"
-    "ld r0, X+ \n\t"
-    "out __SP_L__, r0 \n\t"
-    "ld r0, X+ \n\t"
-    "out __SP_H__, r0 \n\t"
+    "out __SP_L__, %A0 \n\t"
+    "out __SP_H__, %B0 \n\t"
     // Callee-save registers
     "pop r29  \n\t"
     "pop r28  \n\t"
@@ -73,22 +70,31 @@ static inline void restoreContext() {
     "pop r0  \n\t"
     "out __SREG__, r0  \n\t"
     "pop r0 \n\t"
+  : /* no output */
+  : "r"(sp)
   );
 }
 
-void startTasking(task_handle_t firstTask) {
-  CurrentTask = firstTask;
-  restoreContext();
+NORETURN startTasking() {
+  currentTaskItem = tasks.head();
+  restoreContext(currentTaskItem->value());
+  
+  // gcc is smart enough to recognize that this function does, in fact, return.
+  // The code below is a total hack to fool it into allowing NORETURN here.
+  asm volatile ("ret");
+  while (1);
 }
-void yieldTo(task_handle_t newTask) {
-  saveContext();
-  CurrentTask = newTask;
-  restoreContext();
+void yield() {
+  saveContext(&currentTaskItem->value());
+  TaskList::Item *next = currentTaskItem->next();
+  if (!next) next = tasks.head();
+  currentTaskItem = next;
+  restoreContext(next->value());
 }
 
 #define _PUSH(x) *(sp--) = (uint8_t) x
 static const uint8_t kSregIntEnabled = 0x00;
-task_t initTask(main_t entry, uint8_t *stack, size_t stackSize) {
+Task::Task(main_t entry, uint8_t *stack, size_t stackSize) : _listItem(0) {
   uint8_t *sp = stack + stackSize - 1;
 
   // Code "return address" of entry routine
@@ -106,7 +112,8 @@ task_t initTask(main_t entry, uint8_t *stack, size_t stackSize) {
   _PUSH(28);
   _PUSH(29);
 
-  return sp;
+  _listItem.value() = sp;
+  tasks.insert(&_listItem);
 }
 #undef _PUSH
 
