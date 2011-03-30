@@ -17,6 +17,9 @@ void timeInit();
 // Return the number of microseconds since system start, mod 2^32.
 uint32_t ticks();
 
+// Gives up control for the specified number of microseconds.
+void usleep(uint32_t count);
+
 }  // namespace lilos
 
 extern "C" void TIMER1_OVF_vect(void) __attribute__((signal));

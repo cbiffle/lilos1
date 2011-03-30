@@ -2,6 +2,7 @@
 #include <util/atomic.h>
 
 #include "time.hh"
+#include "task.hh"
 
 namespace lilos {
 
@@ -29,6 +30,12 @@ uint32_t ticks() {
   }
 
   return assembled;
+}
+
+void usleep(uint32_t count) {
+  uint32_t deadline = ticks() + count;
+  while (deadline < ticks()) yield();
+  while (deadline > ticks()) yield();
 }
 
 }  // namespace lilos
