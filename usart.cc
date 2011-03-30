@@ -19,7 +19,8 @@ void usart_init_raw(uint16_t ubrr) {
 }
 
 void usart_send(uint8_t b) {
-  while (!(UCSR0A & (1 << UDRE0)));
+  // Wait until the TX data register is empty.
+  while (!(UCSR0A & (1 << UDRE0))) lilos::yield();
 
   UDR0 = b;
 }
