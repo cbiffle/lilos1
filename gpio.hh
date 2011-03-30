@@ -1,7 +1,9 @@
-#ifndef LILOS_AVR_PORT_HH_
-#define LILOS_AVR_PORT_HH_
+#ifndef LILOS_GPIO_HH_
+#define LILOS_GPIO_HH_
 
 #include <avr/io.h>
+
+namespace lilos {
 
 namespace port {
 
@@ -66,9 +68,11 @@ enum {
   D = 9,
 };
 
-#define FASTPIN(P,N) ((port::Pin) { port::P, _BV(N) })
+#define FASTPIN(P,N) ((lilos::port::Pin) { lilos::port::P, _BV(N) })
 
 };  // namespace port
 
-#endif // LILOS_AVR_PORT_HH_
+}  // namespace lilos
+
+#endif // LILOS_GPIO_HH_
 

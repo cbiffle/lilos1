@@ -1,13 +1,13 @@
 #include <stddef.h>
 #include "task.hh"
-#include "AvrPort.hh"
+#include "gpio.hh"
 #include <util/delay.h>
 #include <stdlib.h>
 #include "usart.hh"
 #include <avr/interrupt.h>
 #include "time.hh"
 
-static const port::Pin led = FASTPIN(B, 5);
+static const lilos::port::Pin led = FASTPIN(B, 5);
 
 static void debug(uint8_t signal) {
   for (int i = 0; i < 8; i++) {
@@ -57,7 +57,7 @@ int main() {
   lilos::timeInit();
   sei();
 
-  led.setDirection(port::OUT);
+  led.setDirection(lilos::port::OUT);
   led.setValue(false);
   debug(0xAA);
   led.setValue(false);
