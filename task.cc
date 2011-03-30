@@ -23,7 +23,6 @@ static ALWAYS_INLINE void saveContext(stack_t *spp) {
   asm volatile (
     "push r0 \n\t"
     "in r0, __SREG__ \n\t"
-    "cli \n\t"
     "push r0 \n\t"
     "push r1 \n\t"
     // Callee-saved registers
@@ -115,7 +114,7 @@ void yield() {
 }
 
 #define _PUSH(x) *(sp--) = (uint8_t) x
-static const uint8_t kSregIntEnabled = 0x00;  // Not really enabled, for now.
+static const uint8_t kSregIntEnabled = 0x80;
 Task::Task(main_t entry, uint8_t *stack, size_t stackSize)
   : _sp(0),
     _status(RUNNABLE) {
