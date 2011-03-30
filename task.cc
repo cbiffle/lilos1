@@ -5,7 +5,11 @@ namespace lilos {
 static TaskList tasks;
 static TaskList::Item *currentTaskItem = 0;
 
-static inline void saveContext(uint8_t **sp) {
+// For saveContext/restoreContext, inlining is not just an optimization:
+// it's critical to correctness.  This attribute lets us mandate it.
+#define ALWAYS_INLINE inline __attribute__((always_inline))
+
+static ALWAYS_INLINE void saveContext(stack_t *spp) {
   asm volatile (
     "push r0 \n\t"
     "in r0, __SREG__ \n\t"
@@ -37,11 +41,11 @@ static inline void saveContext(uint8_t **sp) {
     "in r0, __SP_H__ \n\t"
     "std %a0+1, r0 \n\t"
   : /* no output */
-  : "e"(sp)
+  : "e"(spp)
   );
 }
 
-static inline void restoreContext(uint8_t *sp) {
+static ALWAYS_INLINE void restoreContext(stack_t sp) {
   asm volatile (
     // Stack pointer
     "out __SP_L__, %A0 \n\t"

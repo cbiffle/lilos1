@@ -10,7 +10,9 @@ namespace lilos {
 
 #define NORETURN void __attribute__((noreturn))
 
-typedef list::List<uint8_t *> TaskList;
+typedef uint8_t *stack_t;
+
+typedef list::List<stack_t> TaskList;
 
 typedef NORETURN (*main_t)();
 
