@@ -9,6 +9,16 @@ static TaskList::Item *currentTaskItem = 0;
 // it's critical to correctness.  This attribute lets us mandate it.
 #define ALWAYS_INLINE inline __attribute__((always_inline))
 
+/*
+ * Context save/restore
+ *
+ * You might note that the functions below save only a subset of registers.
+ * This is deliberate: these are the 'callee-save' registers under avr-gcc's
+ * calling conventions.  We can rely on the compiler to save others before
+ * entering yield() or startTasking().  This saves 48 cycles per task switch
+ * on ATmega, 24 on xmega.
+ */
+
 static ALWAYS_INLINE void saveContext(stack_t *spp) {
   asm volatile (
     "push r0 \n\t"
@@ -85,6 +95,7 @@ NORETURN startTasking() {
   
   // gcc is smart enough to recognize that this function does, in fact, return.
   // The code below is a total hack to fool it into allowing NORETURN here.
+  // It adds two bytes to the output.
   asm volatile ("ret");
   while (1);
 }
@@ -97,7 +108,7 @@ void yield() {
 }
 
 #define _PUSH(x) *(sp--) = (uint8_t) x
-static const uint8_t kSregIntEnabled = 0x00;
+static const uint8_t kSregIntEnabled = 0x00;  // Not really enabled, for now.
 Task::Task(main_t entry, uint8_t *stack, size_t stackSize) : _listItem(0) {
   uint8_t *sp = stack + stackSize - 1;
 

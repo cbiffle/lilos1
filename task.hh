@@ -1,6 +1,21 @@
 #ifndef LILOS_TASK_HH_
 #define LILOS_TASK_HH_
 
+/*
+ * Cooperative multitasking support.
+ *
+ * General use:
+ *  1. Create one or more Tasks.
+ *  2. Call startTasking.
+ *  3. To pass control to another task, call yield().
+ *
+ * New tasks can be created at any time, simply by constructing a Task object.
+ * The task will be in the rotation at the next call to yield() or
+ * startTasking().
+ *
+ * Tasks cannot be *removed* from scheduling at this time.
+ */
+
 #include <stdint.h>
 #include <stddef.h>
 
