@@ -32,7 +32,7 @@ build:
 	mkdir -p build/
 
 
-liblilos.a: build/task.o build/usart.o build/time.o
+liblilos.a: build/task.o build/usart.o build/time.o build/debug.o
 	$(AR) rcs $@ $^
 
 build/%.o: src/%.cc build
