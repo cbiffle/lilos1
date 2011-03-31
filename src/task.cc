@@ -97,6 +97,8 @@ NORETURN startTasking() {
   while (1);
 }
 void yield() {
+  if (!currentTask) return;
+
   Task *task = currentTask;
   saveContext(&task->sp());
   
