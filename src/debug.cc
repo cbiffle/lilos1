@@ -24,6 +24,7 @@ void debugWrite(uint32_t word) {
       out = (nibble - 10) + 'A';
     }
     usart_send(out);
+    word <<= 4;
   }
   usart_send(' ');
 }
