@@ -2,8 +2,8 @@
 #include <avr/io.h>
 #include <stddef.h>
 
-#include "usart.hh"
-#include "task.hh"
+#include <lilos/usart.hh>
+#include <lilos/task.hh>
 
 static volatile uint8_t _txCount = 0;
 static volatile const char *_txSource = 0;

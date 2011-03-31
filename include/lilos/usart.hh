@@ -1,7 +1,7 @@
 #ifndef __UART_HH__
 #define __UART_HH__
 
-#include "static_assert.hh"
+#include <lilos/static_assert.hh>
 
 void usart_init_raw(uint16_t ubrr);
 

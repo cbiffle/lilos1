@@ -1,11 +1,13 @@
 LD=avr-ld
 GXX=avr-g++
+AR=avr-ar
 OBJCOPY=avr-objcopy
 PART=atmega328p
 DUDE=avrdude
 PORT=/dev/tty.usbserial-FTE597U5
 
-CFLAGS= -O2 \
+CFLAGS= -Iinclude \
+        -O2 \
         -DF_CPU=8000000 \
         -mmcu=$(PART) \
         -fdata-sections -ffunction-sections \
@@ -15,6 +17,7 @@ CFLAGS= -O2 \
         -ffreestanding
 
 LDFLAGS= -mmcu=$(PART) \
+         -L. \
          -Wl,--gc-sections,--relax \
          -Wl,-Map,main.map
 
@@ -23,12 +26,24 @@ all: main.hex
 clean:
 	-rm -f main.elf main.hex
 	-rm -f *.o
+	-rm -rf build/
 
-main.elf: main.o task.o usart.o time.o
-	$(GXX) $(LDFLAGS) -o $@ $^
+build:
+	mkdir -p build/
+
+
+liblilos.a: build/task.o build/usart.o build/time.o
+	$(AR) rcs $@ $^
+
+build/%.o: src/%.cc build
+	$(GXX) $(CFLAGS) -c -o $@ $<
+
+
+main.elf: main.o liblilos.a
+	$(GXX) $(LDFLAGS) -o $@ $^ -llilos
 
 %.o: %.cc
-	$(GXX) $(CFLAGS) -c -o $@ $<
+	$(GXX) $(CFLAGS) -c -o $@ $^
 
 main.hex: main.elf
 	$(OBJCOPY) -O ihex -R .eeprom $< $@

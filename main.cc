@@ -1,13 +1,15 @@
 #include <stddef.h>
-#include "task.hh"
-#include "gpio.hh"
-#include <util/delay.h>
 #include <stdlib.h>
-#include "usart.hh"
-#include <avr/interrupt.h>
-#include "time.hh"
 
-static const lilos::port::Pin led = FASTPIN(B, 5);
+#include <util/delay.h>
+#include <avr/interrupt.h>
+
+#include <lilos/task.hh>
+#include <lilos/gpio.hh>
+#include <lilos/usart.hh>
+#include <lilos/time.hh>
+
+static const lilos::port::Pin led = { lilos::port::B, _BV(5) };
 
 static void debug(uint8_t signal) {
   for (int i = 0; i < 8; i++) {

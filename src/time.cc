@@ -1,8 +1,8 @@
 #include <avr/io.h>
 #include <util/atomic.h>
 
-#include "time.hh"
-#include "task.hh"
+#include <lilos/time.hh>
+#include <lilos/task.hh>
 
 namespace lilos {
 
