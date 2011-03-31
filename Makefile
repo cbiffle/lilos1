@@ -48,7 +48,9 @@ main.elf: main.o liblilos.a
 main.hex: main.elf
 	$(OBJCOPY) -O ihex -R .eeprom $< $@
 
-program: main.hex
+reset:
 	stty -f $(PORT) hupcl
+
+program: main.hex reset
 	$(DUDE) -p m328p -P $(PORT) -c stk500v1 -b 57600 \
 	  -U flash:w:$<
