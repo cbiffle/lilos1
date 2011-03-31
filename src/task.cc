@@ -114,7 +114,7 @@ void yield() {
   restoreContext(task->sp());
 }
 
-#define _PUSH(x) *(sp--) = (uint8_t) x
+#define _PUSH(x) *(sp--) = (uint8_t) (x)
 static const uint8_t kSregIntEnabled = 0x80;
 Task::Task(main_t entry, uint8_t *stack, size_t stackSize)
   : _sp(0),
