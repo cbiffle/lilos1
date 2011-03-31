@@ -1,13 +1,10 @@
 #include <lilos/task.hh>
+#include <lilos/util.hh>
 
 namespace lilos {
 
 static Task *firstTask = 0;
 static Task *currentTask = 0;
-
-// For saveContext/restoreContext, inlining is not just an optimization:
-// it's critical to correctness.  This attribute lets us mandate it.
-#define ALWAYS_INLINE inline __attribute__((always_inline))
 
 /*
  * Context save/restore

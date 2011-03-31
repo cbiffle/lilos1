@@ -20,9 +20,9 @@
 #include <stdint.h>
 #include <stddef.h>
 
-namespace lilos {
+#include <lilos/util.hh>
 
-#define NORETURN void __attribute__((noreturn))
+namespace lilos {
 
 typedef uint8_t *stack_t;
 
