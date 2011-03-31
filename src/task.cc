@@ -20,6 +20,7 @@ static ALWAYS_INLINE void saveContext(stack_t *spp) {
   asm volatile (
     "push r0 \n\t"
     "in r0, __SREG__ \n\t"
+    "cli \n\t"
     "push r0 \n\t"
     "push r1 \n\t"
     // Callee-saved registers
