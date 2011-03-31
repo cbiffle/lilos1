@@ -8,6 +8,7 @@
 #include <lilos/gpio.hh>
 #include <lilos/usart.hh>
 #include <lilos/time.hh>
+#include <lilos/debug.hh>
 
 static const lilos::port::Pin led = { lilos::port::B, _BV(5) };
 
@@ -19,44 +20,31 @@ static void debug(uint8_t signal) {
   }
 }
 
-static void send_hex(uint32_t val) {
-  for (int i = 0; i < 8; i++) {
-    uint8_t nibble = (val >> 28) & 0xF;
-    if (nibble > 9) {
-      nibble = (nibble - 10) + 'A';
-    } else {
-      nibble += '0';
-    }
-    usart_send(nibble);
-    val <<= 4;
+uint8_t onStack[128];
+void onMain() {
+  while (1) {
+    lilos::debugWrite("on\r");
+    led.setValue(true);
+    lilos::usleep(1000000);
   }
-  usart_send((uint8_t) ' ');
 }
 
-uint8_t flashStack[128];
-void flashMain() {
+uint8_t offStack[128];
+void offMain() {
   while (1) {
-    led.setValue(true);
     lilos::usleep(500000);
+    lilos::debugWrite("off\r");
     led.setValue(false);
     lilos::usleep(500000);
   }
 }
 
-uint8_t txStack[128];
-void txMain() {
-  while (1) {
-    send_hex(lilos::ticks());
-    lilos::usleep(1000000);
-  }
-}
-
-static lilos::Task flashTask(flashMain, flashStack, 128);
-static lilos::Task txTask(txMain, txStack, 128);
+static lilos::Task onTask(onMain, onStack, 128);
+static lilos::Task offTask(offMain, offStack, 128);
 
 int main() {
-  usart_init<38400>();
   lilos::timeInit();
+  lilos::debugInit();
   sei();
 
   led.setDirection(lilos::port::OUT);
@@ -65,8 +53,10 @@ int main() {
   led.setValue(false);
   _delay_ms(3000);
 
-  flashTask.schedule();
-  txTask.schedule();
+  onTask.schedule();
+  offTask.schedule();
+
+  lilos::debugWrite("Starting...\r");
 
   lilos::startTasking();
 }

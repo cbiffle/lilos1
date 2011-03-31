@@ -19,8 +19,5 @@ inline void usart_init() {
 }
 
 void usart_send(uint8_t);
-void usart_write(const char *, uint8_t);
-
-extern "C" void USART_UDRE_vect(void) __attribute__((signal));
 
 #endif  // __UART_HH__
