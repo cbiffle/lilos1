@@ -1,5 +1,6 @@
 #include <lilos/task.hh>
 #include <lilos/util.hh>
+#include <lilos/debug.hh>
 
 namespace lilos {
 
@@ -143,5 +144,43 @@ void Task::schedule() {
   _next = firstTask;
   firstTask = this;
 }
+
+void taskDump() {
+  debugWrite("--- task dump ---\r");
+
+  debugWrite("Current: ");
+  debugWrite((uint32_t) currentTask);
+  debugLn();
+
+  debugWrite("All:\r");
+  Task *t = firstTask;
+  while (t) {
+    debugWrite("  ");
+    debugWrite((uint32_t) t);
+    debugWrite(" sp=");
+    debugWrite((uint32_t) t->sp());
+    if (t == currentTask) {
+      debugWrite("(you are here)");
+    } else {
+      debugWrite("pc=");
+      union {
+        struct {
+          uint8_t lo;
+          uint8_t hi;
+        } bytes;
+        uint16_t pc;
+      };
+      uint8_t *pcp = t->sp() + 22;  /* 21-byte context + 1-byte offset */
+      bytes.lo = pcp[1];
+      bytes.hi = pcp[0];
+      debugWrite(pc);
+    }
+    debugLn();
+    t = t->next();
+  }
+
+  debugWrite("--- end task dump ---\r");
+}
+
 
 }  // namespace lilos

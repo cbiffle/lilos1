@@ -20,6 +20,14 @@ static void debug(uint8_t signal) {
   }
 }
 
+uint8_t debugStack[128];
+void debugMain() {
+  while (1) {
+    lilos::taskDump();
+    lilos::usleep(1000000);
+  }
+}
+
 uint8_t onStack[128];
 void onMain() {
   while (1) {
@@ -41,6 +49,7 @@ void offMain() {
 
 static lilos::Task onTask(onMain, onStack, 128);
 static lilos::Task offTask(offMain, offStack, 128);
+static lilos::Task debugTask(debugMain, debugStack, 128);
 
 int main() {
   lilos::timeInit();
@@ -55,8 +64,10 @@ int main() {
 
   onTask.schedule();
   offTask.schedule();
+  debugTask.schedule();
 
   lilos::debugWrite("Starting...\r");
+  lilos::taskDump();
 
   lilos::startTasking();
 }

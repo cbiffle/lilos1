@@ -50,6 +50,8 @@ public:
 NORETURN startTasking();
 void yield();
 
+void taskDump();
+
 }  // namespace lilos
 
 #endif  // LILOS_TASK_HH_
