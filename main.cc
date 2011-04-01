@@ -10,6 +10,9 @@
 #include <lilos/time.hh>
 #include <lilos/debug.hh>
 
+using lilos::debugWrite;
+using lilos::debugLn;
+
 static const lilos::port::Pin led = { lilos::port::B, _BV(5) };
 
 static void debug(uint8_t signal) {
@@ -20,6 +23,17 @@ static void debug(uint8_t signal) {
   }
 }
 
+uint8_t serverStack[128];
+void serverMain() {
+  while (1) {
+    lilos::Task *sender = lilos::receive();
+    led.setValue(sender->message());
+    lilos::answer(sender, 0);
+    lilos::yield();
+  }
+}
+static lilos::Task serverTask(serverMain, serverStack, 128);
+
 uint8_t debugStack[128];
 void debugMain() {
   lilos::IntervalTimer timer(1000);
@@ -29,29 +43,20 @@ void debugMain() {
   }
 }
 
-uint8_t onStack[128];
-void onMain() {
-  lilos::IntervalTimer timer(1000);
-  while (1) {
-    lilos::debugWrite("on\r");
-    led.setValue(true);
-    timer.wait();
-  }
-}
-
-uint8_t offStack[128];
-void offMain() {
+uint8_t flashStack[128];
+void flashMain() {
   lilos::IntervalTimer timer(500);
   while (1) {
+    debugWrite("on\r");
+    lilos::msg_t resp = lilos::send(&serverTask, 1);
     timer.wait();
-    lilos::debugWrite("off\r");
-    led.setValue(false);
+    debugWrite("off\r");
+    resp = lilos::send(&serverTask, 0);
     timer.wait();
   }
 }
 
-static lilos::Task onTask(onMain, onStack, 128);
-static lilos::Task offTask(offMain, offStack, 128);
+static lilos::Task flashTask(flashMain, flashStack, 128);
 static lilos::Task debugTask(debugMain, debugStack, 128);
 
 int main() {
@@ -65,11 +70,11 @@ int main() {
   led.setValue(false);
   _delay_ms(3000);
 
-  schedule(&onTask);
-  schedule(&offTask);
   schedule(&debugTask);
+  schedule(&flashTask);
+  schedule(&serverTask);
 
-  lilos::debugWrite("Starting...\r");
+  debugWrite("Starting...\r");
   lilos::taskDump();
 
   lilos::startTasking();

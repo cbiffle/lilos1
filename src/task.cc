@@ -6,6 +6,8 @@ namespace lilos {
 
 static TaskList readyList;
 static Task *currentTask = 0;
+// A total hack: gives yieldTo somewhere to store state, off the stack.
+static Task *_nextTask;
 
 /*
  * Context save/restore
@@ -98,14 +100,23 @@ NORETURN startTasking() {
   while (1);
 }
 
-void yield() {
-  if (!currentTask) return;
-
-  saveContext(&currentTask->sp());
-  
+Task *nextTask() {
   Task *newTask = currentTask->next();
   if (!newTask) newTask = readyList.head();
+  return newTask;
+}
 
+NEVER_INLINE void yieldTo();
+void yieldTo() {
+  saveContext(&currentTask->sp());
+  currentTask = _nextTask;
+  restoreContext(currentTask->sp());
+}
+
+void NEVER_INLINE yield() {
+  if (!currentTask) return;
+  saveContext(&currentTask->sp());
+  Task *newTask = nextTask();
   currentTask = newTask;
   restoreContext(newTask->sp());
 }
@@ -138,19 +149,64 @@ Task::Task(main_t entry, uint8_t *stack, size_t stackSize)
 #undef _PUSH
 
 void TaskList::append(Task *task) {
-  task->prev() = _tail;
-  task->next() = 0;
+  task->_prev = _tail;
+  task->_next = 0;
+  task->_container = this;
 
   if (_tail) {
-    _tail->next() = task;
+    _tail->_next = task;
   } else {
     _head = task;
   }
   _tail = task;
 }
 
+void TaskList::remove(Task *task) {
+  if (task->_container != this) return;
+
+  if (task->_prev) task->_prev->_next = task->_next;
+  if (task->_next) task->_next->_prev = task->_prev;
+
+  if (task == _head) _head = task->_next;
+  if (task == _tail) _tail = task->_prev;
+
+  task->_container = 0;
+  task->_prev = 0;
+  task->_next = 0;
+}
+
 void schedule(Task *task) {
   readyList.append(task);
+}
+
+void dump1(Task *task, uint8_t indentLevel) {
+  while (indentLevel--) {
+    debugWrite("  ");
+  }
+  debugWrite((uint32_t) task);
+  debugWrite(" sp=");
+  debugWrite((uint32_t) task->sp());
+  if (task == currentTask) {
+    debugWrite("(you are here)");
+  } else {
+    debugWrite("pc=");
+    union {
+      struct {
+        uint8_t lo;
+        uint8_t hi;
+      } bytes;
+      uint16_t pc;
+    };
+    uint8_t *pcp = task->sp() + 22;  /* 21-byte context + 1-byte offset */
+    bytes.lo = pcp[1];
+    bytes.hi = pcp[0];
+    debugWrite(pc);
+  }
+  debugLn();
+
+  for (Task *w = task->waiters().head(); w; w = w->next()) {
+    dump1(w, indentLevel + 1);
+  }
 }
 
 void taskDump() {
@@ -163,32 +219,38 @@ void taskDump() {
   debugWrite("All:\r");
   Task *t = readyList.head();
   while (t) {
-    debugWrite("  ");
-    debugWrite((uint32_t) t);
-    debugWrite(" sp=");
-    debugWrite((uint32_t) t->sp());
-    if (t == currentTask) {
-      debugWrite("(you are here)");
-    } else {
-      debugWrite("pc=");
-      union {
-        struct {
-          uint8_t lo;
-          uint8_t hi;
-        } bytes;
-        uint16_t pc;
-      };
-      uint8_t *pcp = t->sp() + 22;  /* 21-byte context + 1-byte offset */
-      bytes.lo = pcp[1];
-      bytes.hi = pcp[0];
-      debugWrite(pc);
-    }
-    debugLn();
+    dump1(t, 1);
     t = t->next();
   }
 
   debugWrite("--- end task dump ---\r");
 }
 
+msg_t send(Task *target, msg_t message) {
+  // Gotta do this and store the result before calling detach()
+  Task *next = nextTask();
+
+  Task *me = currentTask;
+  me->message() = message;
+  me->detach();
+  target->waiters().append(me);
+
+  _nextTask = next;
+  yieldTo();
+
+  return currentTask->message();
+}
+
+Task *receive() {
+  Task *me = currentTask;
+  while (me->waiters().empty()) yield();
+  return me->waiters().head();
+}
+
+void answer(Task *sender, msg_t response) {
+  sender->message() = response;
+  sender->detach();
+  schedule(sender);
+}
 
 }  // namespace lilos
