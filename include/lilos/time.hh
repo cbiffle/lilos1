@@ -14,11 +14,22 @@ namespace lilos {
 // Start time support.
 void timeInit();
 
-// Return the number of microseconds since system start, mod 2^32.
+// Return the number of milliseconds since system start, mod 2^32.
 uint32_t ticks();
 
-// Gives up control for the specified number of microseconds.
-void sleep(uint32_t count);
+// Waits for a particular time to pass.  To sleep for n milliseconds, use:
+//  sleepUntil(ticks() + time)
+void sleepUntil(uint32_t time);
+
+class IntervalTimer {
+  uint32_t _deadline;
+  uint16_t _interval;
+
+public:
+  IntervalTimer(uint16_t interval);
+
+  void wait();
+};
 
 }  // namespace lilos
 

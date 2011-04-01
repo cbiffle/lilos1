@@ -22,28 +22,31 @@ static void debug(uint8_t signal) {
 
 uint8_t debugStack[128];
 void debugMain() {
+  lilos::IntervalTimer timer(1000);
   while (1) {
     lilos::taskDump();
-    lilos::sleep(1000);
+    timer.wait();
   }
 }
 
 uint8_t onStack[128];
 void onMain() {
+  lilos::IntervalTimer timer(1000);
   while (1) {
     lilos::debugWrite("on\r");
     led.setValue(true);
-    lilos::sleep(1000);
+    timer.wait();
   }
 }
 
 uint8_t offStack[128];
 void offMain() {
+  lilos::IntervalTimer timer(500);
   while (1) {
-    lilos::sleep(500);
+    timer.wait();
     lilos::debugWrite("off\r");
     led.setValue(false);
-    lilos::sleep(500);
+    timer.wait();
   }
 }
 

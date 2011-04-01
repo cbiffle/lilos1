@@ -19,10 +19,18 @@ uint32_t ticks() {
   return timerTicks;
 }
 
-void sleep(uint32_t count) {
-  uint32_t deadline = ticks() + count;
+void sleepUntil(uint32_t deadline) {
   while (deadline < ticks()) yield();
   while (deadline > ticks()) yield();
+}
+
+IntervalTimer::IntervalTimer(uint16_t interval)
+: _deadline(ticks() + interval),
+  _interval(interval) {}
+
+void IntervalTimer::wait() {
+  sleepUntil(_deadline);
+  _deadline += _interval;
 }
 
 }  // namespace lilos
