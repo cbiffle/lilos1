@@ -1,6 +1,8 @@
+
 #include <lilos/task.hh>
 #include <lilos/util.hh>
 #include <lilos/debug.hh>
+#include <lilos/pgmspace.h>
 
 namespace lilos {
 
@@ -181,15 +183,15 @@ void schedule(Task *task) {
 
 void dump1(Task *task, uint8_t indentLevel) {
   while (indentLevel--) {
-    debugWrite("  ");
+    debugWrite_P(PSTR("  "));
   }
   debugWrite((uint32_t) task);
-  debugWrite(" sp=");
+  debugWrite_P(PSTR(" sp="));
   debugWrite((uint32_t) task->sp());
   if (task == currentTask) {
-    debugWrite("(you are here)");
+    debugWrite_P(PSTR("(you are here)"));
   } else {
-    debugWrite("pc=");
+    debugWrite_P(PSTR("pc="));
     union {
       struct {
         uint8_t lo;
@@ -210,20 +212,20 @@ void dump1(Task *task, uint8_t indentLevel) {
 }
 
 void taskDump() {
-  debugWrite("--- task dump ---\r");
+  debugWrite_P(PSTR("--- task dump ---\r"));
 
-  debugWrite("Current: ");
+  debugWrite_P(PSTR("Current: "));
   debugWrite((uint32_t) currentTask);
   debugLn();
 
-  debugWrite("All:\r");
+  debugWrite_P(PSTR("All:\r"));
   Task *t = readyList.head();
   while (t) {
     dump1(t, 1);
     t = t->next();
   }
 
-  debugWrite("--- end task dump ---\r");
+  debugWrite_P(PSTR("--- end task dump ---\r"));
 }
 
 msg_t send(Task *target, msg_t message) {

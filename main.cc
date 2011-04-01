@@ -9,8 +9,10 @@
 #include <lilos/usart.hh>
 #include <lilos/time.hh>
 #include <lilos/debug.hh>
+#include <lilos/pgmspace.h>
 
 using lilos::debugWrite;
+using lilos::debugWrite_P;
 using lilos::debugLn;
 
 static const lilos::port::Pin led = { lilos::port::B, _BV(5) };
@@ -47,10 +49,10 @@ uint8_t flashStack[128];
 void flashMain() {
   lilos::IntervalTimer timer(500);
   while (1) {
-    debugWrite("on\r");
+    debugWrite_P(PSTR("on\r"));
     lilos::msg_t resp = lilos::send(&serverTask, 1);
     timer.wait();
-    debugWrite("off\r");
+    debugWrite_P(PSTR("off\r"));
     resp = lilos::send(&serverTask, 0);
     timer.wait();
   }
@@ -74,8 +76,8 @@ int main() {
   schedule(&flashTask);
   schedule(&serverTask);
 
-  debugWrite("Starting...\r");
-  lilos::taskDump();
+//  debugWrite("Starting...\r");
+//  lilos::taskDump();
 
   lilos::startTasking();
 }
