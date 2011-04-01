@@ -43,14 +43,26 @@ public:
   Task(main_t entry, uint8_t *stack, size_t stackSize);
 
   stack_t &sp() { return _sp; }
-  Task *next() { return _next; }
-  Task *prev() { return _prev; }
+  Task *&next() { return _next; }
+  Task *&prev() { return _prev; }
 
   bool runnable() { return _status == RUNNABLE; }
-
-  void schedule();
 };
 
+class TaskList {
+  Task *_head;
+  Task *_tail;
+
+public:
+  TaskList() : _head(0), _tail(0) {}
+
+  Task *head() { return _head; }
+  Task *tail() { return _tail; }
+
+  void append(Task *);
+};
+
+void schedule(Task *);
 NORETURN startTasking();
 void yield();
 

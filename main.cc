@@ -65,9 +65,9 @@ int main() {
   led.setValue(false);
   _delay_ms(3000);
 
-  onTask.schedule();
-  offTask.schedule();
-  debugTask.schedule();
+  schedule(&onTask);
+  schedule(&offTask);
+  schedule(&debugTask);
 
   lilos::debugWrite("Starting...\r");
   lilos::taskDump();

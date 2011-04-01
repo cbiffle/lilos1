@@ -4,8 +4,7 @@
 
 namespace lilos {
 
-static Task *firstTask = 0;
-static Task *lastTask = 0;
+static TaskList readyList;
 static Task *currentTask = 0;
 
 /*
@@ -89,7 +88,7 @@ static ALWAYS_INLINE void restoreContext(stack_t sp) {
 }
 
 NORETURN startTasking() {
-  currentTask = firstTask;
+  currentTask = readyList.head();
   restoreContext(currentTask->sp());
   
   // gcc is smart enough to recognize that this function does, in fact, return.
@@ -108,7 +107,7 @@ void yield() {
   // (The assumption here is that an ISR will fix things.)
   do {
     task = task->next();
-    if (!task) task = firstTask;
+    if (!task) task = readyList.head();
   } while (!task->runnable());
 
   currentTask = task;
@@ -143,15 +142,20 @@ Task::Task(main_t entry, uint8_t *stack, size_t stackSize)
 }
 #undef _PUSH
 
-void Task::schedule() {
-  _prev = lastTask;
-  _next = 0;
-  if (_prev) {
-    _prev->_next = this;
+void TaskList::append(Task *task) {
+  task->prev() = _tail;
+  task->next() = 0;
+
+  if (_tail) {
+    _tail->next() = task;
   } else {
-    firstTask = this;
+    _head = task;
   }
-  lastTask = this;
+  _tail = task;
+}
+
+void schedule(Task *task) {
+  readyList.append(task);
 }
 
 void taskDump() {
@@ -162,7 +166,7 @@ void taskDump() {
   debugLn();
 
   debugWrite("All:\r");
-  Task *t = firstTask;
+  Task *t = readyList.head();
   while (t) {
     debugWrite("  ");
     debugWrite((uint32_t) t);
