@@ -1,6 +1,8 @@
 #ifndef __UART_HH__
 #define __UART_HH__
 
+#include <stddef.h>
+#include <avr/pgmspace.h>
 #include <lilos/static_assert.hh>
 
 void usart_init_raw(uint16_t ubrr);
@@ -19,5 +21,7 @@ inline void usart_init() {
 }
 
 void usart_send(uint8_t);
+void usart_send(const uint8_t *, size_t);
+void usart_send_P(const prog_char *, size_t);
 
 #endif  // __UART_HH__
