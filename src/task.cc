@@ -49,7 +49,7 @@ static ALWAYS_INLINE void saveContext(stack_t *spp) {
     "in r0, __SP_H__ \n\t"
     "std %a0+1, r0 \n\t"
   : /* no output */
-  : "e"(spp)
+  : "b"(spp)
   );
 }
 
