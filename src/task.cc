@@ -97,6 +97,7 @@ NORETURN startTasking() {
   asm volatile ("ret");
   while (1);
 }
+
 void yield() {
   if (!currentTask) return;
 
