@@ -29,8 +29,17 @@ typedef uint8_t *stack_t;
 typedef NORETURN (*main_t)();
 
 class Task {
+  /*
+   * Each task has its own stack pointer and code pointer.  When the task is
+   * at rest (i.e. it has called yield()), the code pointer is pushed onto the
+   * stack, and the resulting stack pointer is stored here.
+   */
   stack_t _sp;
 
+  /*
+   * Each task is a member of a TaskList, which is a doubly-linked list of
+   * tasks in some common state.  These pointers contain the links.
+   */
   Task *_next;
   Task *_prev;
 
