@@ -7,7 +7,8 @@ DUDE=avrdude
 PORT=/dev/tty.usbserial-FTE597U5
 
 CFLAGS= -Iinclude \
-        -O2 \
+        -std=gnu++98 \
+        -Os \
         -DF_CPU=8000000 \
         -mmcu=$(PART) \
         -fdata-sections -ffunction-sections \
@@ -24,9 +25,10 @@ LDFLAGS= -mmcu=$(PART) \
 all: main.hex
 
 clean:
-	-rm -f main.elf main.hex
+	-rm -f main.elf main.hex main.map
 	-rm -f *.o
 	-rm -rf build/
+	-rm -f liblilos.a
 
 build:
 	mkdir -p build/
