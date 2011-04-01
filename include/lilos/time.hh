@@ -4,7 +4,7 @@
 /*
  * Routines for dealing with time.
  *
- * This module takes over Timer/Counter 1.
+ * This module takes over Timer/Counter 2.
  */
 
 #include <stdint.h>
@@ -18,10 +18,10 @@ void timeInit();
 uint32_t ticks();
 
 // Gives up control for the specified number of microseconds.
-void usleep(uint32_t count);
+void sleep(uint32_t count);
 
 }  // namespace lilos
 
-extern "C" void TIMER1_OVF_vect(void) __attribute__((signal));
+extern "C" void TIMER2_COMPA_vect(void) __attribute__((signal));
 
 #endif  // LILOS_TIME_HH_

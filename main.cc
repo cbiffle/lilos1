@@ -24,7 +24,7 @@ uint8_t debugStack[128];
 void debugMain() {
   while (1) {
     lilos::taskDump();
-    lilos::usleep(1000000);
+    lilos::sleep(1000);
   }
 }
 
@@ -33,17 +33,17 @@ void onMain() {
   while (1) {
     lilos::debugWrite("on\r");
     led.setValue(true);
-    lilos::usleep(1000000);
+    lilos::sleep(1000);
   }
 }
 
 uint8_t offStack[128];
 void offMain() {
   while (1) {
-    lilos::usleep(500000);
+    lilos::sleep(500);
     lilos::debugWrite("off\r");
     led.setValue(false);
-    lilos::usleep(500000);
+    lilos::sleep(500);
   }
 }
 

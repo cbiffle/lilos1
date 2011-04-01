@@ -6,33 +6,20 @@
 
 namespace lilos {
 
-static uint16_t timerTopBits = 0;
+static uint32_t timerTicks = 0;
 
 void timeInit() {
-  timerTopBits = 0;
-  TCCR1A = 0;  // normal mode
-  TCCR1B = 2;  // clk/8
-  TIMSK1 = _BV(TOIE1);  // interrupt on overflow
+  TCCR2A = 2;  // CTC mode
+  TCCR2B = 6;  // clk/256
+  TIMSK2 = _BV(OCIE2A);  // interrupt on match
+  OCR2A = F_CPU / 1000 / 256 - 1;
 }
 
 uint32_t ticks() {
-  union {
-    struct {
-      uint16_t low;
-      uint16_t high;
-    } parts;
-    uint32_t assembled;
-  };
-
-  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    parts.low = TCNT1;
-    parts.high = timerTopBits;
-  }
-
-  return assembled;
+  return timerTicks;
 }
 
-void usleep(uint32_t count) {
+void sleep(uint32_t count) {
   uint32_t deadline = ticks() + count;
   while (deadline < ticks()) yield();
   while (deadline > ticks()) yield();
@@ -40,6 +27,6 @@ void usleep(uint32_t count) {
 
 }  // namespace lilos
 
-void TIMER1_OVF_vect() {
-  lilos::timerTopBits++;
+void TIMER2_COMPA_vect() {
+  lilos::timerTicks++;
 }
