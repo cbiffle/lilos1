@@ -34,19 +34,12 @@ class Task {
   Task *_next;
   Task *_prev;
 
-  enum {
-    RUNNABLE = 0,
-    WAITING = 1,
-  } _status;
-
 public:
   Task(main_t entry, uint8_t *stack, size_t stackSize);
 
   stack_t &sp() { return _sp; }
   Task *&next() { return _next; }
   Task *&prev() { return _prev; }
-
-  bool runnable() { return _status == RUNNABLE; }
 };
 
 class TaskList {

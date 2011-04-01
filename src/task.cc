@@ -100,18 +100,13 @@ NORETURN startTasking() {
 void yield() {
   if (!currentTask) return;
 
-  Task *task = currentTask;
-  saveContext(&task->sp());
+  saveContext(&currentTask->sp());
   
-  // Busy-wait until we find a runnable task.
-  // (The assumption here is that an ISR will fix things.)
-  do {
-    task = task->next();
-    if (!task) task = readyList.head();
-  } while (!task->runnable());
+  Task *newTask = currentTask->next();
+  if (!newTask) newTask = readyList.head();
 
-  currentTask = task;
-  restoreContext(task->sp());
+  currentTask = newTask;
+  restoreContext(newTask->sp());
 }
 
 #define _PUSH(x) *(sp--) = (uint8_t) (x)
@@ -119,8 +114,7 @@ static const uint8_t kSregIntEnabled = 0x80;
 Task::Task(main_t entry, uint8_t *stack, size_t stackSize)
   : _sp(0),
     _next(0),
-    _prev(0),
-    _status(RUNNABLE) {
+    _prev(0) {
   uint8_t *sp = stack + stackSize - 1;
 
   // Code "return address" of entry routine
