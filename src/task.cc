@@ -5,6 +5,7 @@
 namespace lilos {
 
 static Task *firstTask = 0;
+static Task *lastTask = 0;
 static Task *currentTask = 0;
 
 /*
@@ -118,6 +119,8 @@ void yield() {
 static const uint8_t kSregIntEnabled = 0x80;
 Task::Task(main_t entry, uint8_t *stack, size_t stackSize)
   : _sp(0),
+    _next(0),
+    _prev(0),
     _status(RUNNABLE) {
   uint8_t *sp = stack + stackSize - 1;
 
@@ -141,8 +144,14 @@ Task::Task(main_t entry, uint8_t *stack, size_t stackSize)
 #undef _PUSH
 
 void Task::schedule() {
-  _next = firstTask;
-  firstTask = this;
+  _prev = lastTask;
+  _next = 0;
+  if (_prev) {
+    _prev->_next = this;
+  } else {
+    firstTask = this;
+  }
+  lastTask = this;
 }
 
 void taskDump() {

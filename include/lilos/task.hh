@@ -30,7 +30,10 @@ typedef NORETURN (*main_t)();
 
 class Task {
   stack_t _sp;
+
   Task *_next;
+  Task *_prev;
+
   enum {
     RUNNABLE = 0,
     WAITING = 1,
@@ -41,6 +44,7 @@ public:
 
   stack_t &sp() { return _sp; }
   Task *next() { return _next; }
+  Task *prev() { return _prev; }
 
   bool runnable() { return _status == RUNNABLE; }
 
