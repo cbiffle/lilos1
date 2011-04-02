@@ -106,6 +106,7 @@ msg_t send(Task *, msg_t);
 Task *receive();
 void answer(Task *, msg_t);
 
+Task *currentTask();
 void schedule(Task *);
 NORETURN startTasking();
 void NEVER_INLINE yield();

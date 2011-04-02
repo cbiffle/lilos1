@@ -9,7 +9,9 @@
 namespace lilos {
 
 static TaskList readyList;
-static Task * volatile currentTask = 0;
+static Task * volatile _currentTask = 0;
+
+Task *currentTask() { return _currentTask; }
 
 /*
  * Context save/restore
@@ -92,8 +94,8 @@ static ALWAYS_INLINE void restoreContext(stack_t sp) {
 }
 
 NORETURN startTasking() {
-  currentTask = readyList.head();
-  restoreContext(currentTask->sp());
+  _currentTask = readyList.head();
+  restoreContext(_currentTask->sp());
   
   // gcc is smart enough to recognize that this function does, in fact, return.
   // The code below is a total hack to fool it into allowing NORETURN here.
@@ -103,7 +105,7 @@ NORETURN startTasking() {
 }
 
 Task *nextTask() {
-  Task *newTask = currentTask->next();
+  Task *newTask = _currentTask->next();
   if (!newTask) newTask = readyList.head();
   return newTask;
 }
@@ -119,22 +121,22 @@ NEVER_INLINE void yieldTo(Task *next) {
   static Task * volatile _nextTask;
   _nextTask = next;
 
-  saveContext(&currentTask->sp());
-  currentTask = _nextTask;
-  restoreContext(currentTask->sp());
+  saveContext(&_currentTask->sp());
+  _currentTask = _nextTask;
+  restoreContext(_currentTask->sp());
 }
 
 void NEVER_INLINE yield() {
-  if (!currentTask) return;
-  saveContext(&currentTask->sp());
+  if (!_currentTask) return;
+  saveContext(&_currentTask->sp());
   Task *newTask = nextTask();
-  currentTask = newTask;
+  _currentTask = newTask;
   restoreContext(newTask->sp());
 }
 
 void detachAndYield() {
   Task *next = nextTask();
-  currentTask->detach();
+  _currentTask->detach();
   yieldTo(next);
 }
 
@@ -225,7 +227,7 @@ void dump1(Task *task, uint8_t indentLevel) {
   debugWrite((uint32_t) task);
   debugWrite_P(PSTR(" sp="));
   debugWrite((uint32_t) task->sp());
-  if (task == currentTask) {
+  if (task == _currentTask) {
     debugWrite_P(PSTR("(you are here)"));
   } else {
     debugWrite_P(PSTR("pc="));
@@ -252,7 +254,7 @@ void taskDump() {
   debugWrite_P(PSTR("--- task dump ---\r"));
 
   debugWrite_P(PSTR("Current: "));
-  debugWrite((uint32_t) currentTask);
+  debugWrite((uint32_t) _currentTask);
   debugLn();
 
   debugWrite_P(PSTR("All:\r"));
@@ -269,7 +271,7 @@ msg_t send(Task *target, msg_t message) {
   // Gotta do this and store the result before calling detach()
   Task *next = nextTask();
 
-  Task *me = currentTask;
+  Task *me = _currentTask;
   me->message() = message;
   
   me->detach();
@@ -277,11 +279,11 @@ msg_t send(Task *target, msg_t message) {
 
   yieldTo(next);
 
-  return currentTask->message();
+  return _currentTask->message();
 }
 
 Task *receive() {
-  Task *me = currentTask;
+  Task *me = _currentTask;
   while (me->waiters().empty()) yield();
   return me->waiters().head();
 }
