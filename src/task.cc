@@ -291,6 +291,10 @@ void taskDump() {
 }
 
 msg_t send(Task *target, msg_t message) {
+  return send(&target->waiters(), message);
+}
+
+msg_t send(TaskList *target, msg_t message) {
   // Gotta do this and store the result before calling detach()
   Task *next = nextTask();
 
@@ -298,7 +302,7 @@ msg_t send(Task *target, msg_t message) {
   me->message() = message;
   
   me->detach();
-  target->waiters().appendAtomic(me);
+  target->appendAtomic(me);
 
   yieldTo(next);
 

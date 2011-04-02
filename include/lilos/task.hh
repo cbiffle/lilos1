@@ -108,6 +108,7 @@ public:
  * Messaging
  */
 msg_t send(Task *, msg_t);
+msg_t send(TaskList *, msg_t);
 Task *receive();
 void answer(Task *, msg_t);
 
