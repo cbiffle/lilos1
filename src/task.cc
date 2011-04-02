@@ -110,6 +110,12 @@ Task *nextTask() {
   return newTask;
 }
 
+Task *nextTask_interruptsDisabled() {
+  Task *newTask = _currentTask->nextNonAtomic();
+  if (!newTask) newTask = readyList.headNonAtomic();
+  return newTask;
+}
+
 NEVER_INLINE void yieldTo(Task *next) {
   /*
    * This is a bit of a hack.  We need somewhere to store the next task,
@@ -129,7 +135,7 @@ NEVER_INLINE void yieldTo(Task *next) {
 void NEVER_INLINE yield() {
   if (!_currentTask) return;
   saveContextAndDisableInterrupts(&_currentTask->sp());
-  Task *newTask = nextTask();
+  Task *newTask = nextTask_interruptsDisabled();
   _currentTask = newTask;
   restoreContext(newTask->sp());
 }

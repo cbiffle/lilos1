@@ -46,6 +46,8 @@ public:
   Task *tail();
   bool empty() { return !head(); }
 
+  Task *headNonAtomic() { return _head; }
+
   void appendAtomic(Task *);
   void removeAtomic(Task *);
 };
@@ -89,6 +91,8 @@ public:
 
   Task *next();
   Task *prev();
+
+  Task *nextNonAtomic() { return _next; }
 
   msg_t &message() { return _message; }
   TaskList &waiters() { return _waiters; }
