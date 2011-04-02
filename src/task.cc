@@ -1,5 +1,6 @@
 #include <util/atomic.h>
 
+#include <lilos/atomic.hh>
 #include <lilos/task.hh>
 #include <lilos/util.hh>
 #include <lilos/debug.hh>
@@ -8,7 +9,7 @@
 namespace lilos {
 
 static TaskList readyList;
-static Task *currentTask = 0;
+static Task * volatile currentTask = 0;
 
 /*
  * Context save/restore
@@ -158,37 +159,55 @@ Task::Task(main_t entry, uint8_t *stack, size_t stackSize)
 }
 #undef _PUSH
 
-void TaskList::append(Task *task) {
-  task->_prev = _tail;
-  task->_next = 0;
-  task->_container = this;
-
-  if (_tail) {
-    _tail->_next = task;
-  } else {
-    _head = task;
-  }
-  _tail = task;
+Task *Task::next() {
+  ATOMIC { return _next; }
 }
 
-void TaskList::remove(Task *task) {
-  if (task->_container != this) return;
+Task *Task::prev() {
+  ATOMIC { return _prev; }
+}
 
-  if (task->_prev) task->_prev->_next = task->_next;
-  if (task->_next) task->_next->_prev = task->_prev;
+Task *TaskList::head() {
+  ATOMIC { return _head; }
+}
 
-  if (task == _head) _head = task->_next;
-  if (task == _tail) _tail = task->_prev;
+Task *TaskList::tail() {
+  ATOMIC { return _tail; }
+}
 
-  task->_container = 0;
-  task->_prev = 0;
-  task->_next = 0;
+void TaskList::appendAtomic(Task *task) {
+  ATOMIC {
+    task->_prev = _tail;
+    task->_next = 0;
+    task->_container = this;
+
+    if (_tail) {
+      _tail->_next = task;
+    } else {
+      _head = task;
+    }
+    _tail = task;
+  }
+}
+
+void TaskList::removeAtomic(Task *task) {
+  ATOMIC {
+    if (task->_container != this) return;
+
+    if (task->_prev) task->_prev->_next = task->_next;
+    if (task->_next) task->_next->_prev = task->_prev;
+
+    if (task == _head) _head = task->_next;
+    if (task == _tail) _tail = task->_prev;
+
+    task->_container = 0;
+    task->_prev = 0;
+    task->_next = 0;
+  }
 }
 
 void schedule(Task *task) {
-  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    readyList.append(task);
-  }
+  readyList.appendAtomic(task);
 }
 
 void dump1(Task *task, uint8_t indentLevel) {
@@ -245,10 +264,8 @@ msg_t send(Task *target, msg_t message) {
   Task *me = currentTask;
   me->message() = message;
   
-  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    me->detach();
-    target->waiters().append(me);
-  }
+  me->detach();
+  target->waiters().appendAtomic(me);
 
   yieldTo(next);
 
@@ -263,10 +280,8 @@ Task *receive() {
 
 void answer(Task *sender, msg_t response) {
   sender->message() = response;
-  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    sender->detach();
-    schedule(sender);
-  }
+  sender->detach();
+  schedule(sender);
 }
 
 }  // namespace lilos

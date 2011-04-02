@@ -36,18 +36,18 @@ typedef uintptr_t msg_t;
 
 class Task;
 class TaskList {
-  Task *_head;
-  Task *_tail;
+  Task * volatile _head;
+  Task * volatile _tail;
 
 public:
   TaskList() : _head(0), _tail(0) {}
 
-  Task *head() { return _head; }
-  Task *tail() { return _tail; }
-  bool empty() { return !_head; }
+  Task *head();
+  Task *tail();
+  bool empty() { return !head(); }
 
-  void append(Task *);
-  void remove(Task *);
+  void appendAtomic(Task *);
+  void removeAtomic(Task *);
 };
 
 class Task {
@@ -65,9 +65,9 @@ class Task {
    * Each task is a member of a TaskList, which is a doubly-linked list of
    * tasks in some common state.  These pointers contain the links.
    */
-  Task *_next;
-  Task *_prev;
-  TaskList *_container;
+  Task * volatile _next;
+  Task * volatile _prev;
+  TaskList * volatile _container;
 
   /*
    * When task A sends a message to task B, task A leaves the runnable list
@@ -87,13 +87,13 @@ public:
 
   stack_t &sp() { return _sp; }
 
-  Task *next() { return _next; }
-  Task *prev() { return _prev; }
+  Task *next();
+  Task *prev();
 
   msg_t &message() { return _message; }
   TaskList &waiters() { return _waiters; }
 
-  void detach() { _container->remove(this); }
+  void detach() { _container->removeAtomic(this); }
 
   friend class TaskList;
 };
