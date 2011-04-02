@@ -8,8 +8,6 @@ namespace lilos {
 
 static TaskList readyList;
 static Task *currentTask = 0;
-// A total hack: gives yieldTo somewhere to store state, off the stack.
-static Task *_nextTask;
 
 /*
  * Context save/restore
@@ -108,8 +106,17 @@ Task *nextTask() {
   return newTask;
 }
 
-NEVER_INLINE void yieldTo();
-void yieldTo() {
+NEVER_INLINE void yieldTo(Task *next) {
+  /*
+   * This is a bit of a hack.  We need somewhere to store the next task,
+   * without displacing the return address on the stack.  So, we stash it in
+   * this static variable.  Because yieldTo is not reentrant (by definition)
+   * this is safe -- we declare it 'volatile' only so the compiler doesn't get
+   * any big ideas about caching the contents in a register.
+   */
+  static Task * volatile _nextTask;
+  _nextTask = next;
+
   saveContext(&currentTask->sp());
   currentTask = _nextTask;
   restoreContext(currentTask->sp());
@@ -237,8 +244,7 @@ msg_t send(Task *target, msg_t message) {
   me->detach();
   target->waiters().append(me);
 
-  _nextTask = next;
-  yieldTo();
+  yieldTo(next);
 
   return currentTask->message();
 }

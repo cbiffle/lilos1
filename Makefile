@@ -11,6 +11,7 @@ CFLAGS= -Iinclude \
         -Os \
         -DF_CPU=8000000 \
         -mmcu=$(PART) \
+        -fno-threadsafe-statics \
         -fdata-sections -ffunction-sections \
         -fpack-struct \
         -fshort-enums \
