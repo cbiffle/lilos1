@@ -23,7 +23,7 @@ Task *currentTask() { return _currentTask; }
  * on ATmega, 24 on xmega.
  */
 
-static ALWAYS_INLINE void saveContext(stack_t *spp) {
+static ALWAYS_INLINE void saveContextAndDisableInterrupts(stack_t *spp) {
   asm volatile (
     "push r0 \n\t"
     "in r0, __SREG__ \n\t"
@@ -121,14 +121,14 @@ NEVER_INLINE void yieldTo(Task *next) {
   static Task * volatile _nextTask;
   _nextTask = next;
 
-  saveContext(&_currentTask->sp());
+  saveContextAndDisableInterrupts(&_currentTask->sp());
   _currentTask = _nextTask;
   restoreContext(_currentTask->sp());
 }
 
 void NEVER_INLINE yield() {
   if (!_currentTask) return;
-  saveContext(&_currentTask->sp());
+  saveContextAndDisableInterrupts(&_currentTask->sp());
   Task *newTask = nextTask();
   _currentTask = newTask;
   restoreContext(newTask->sp());
