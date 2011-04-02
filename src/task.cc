@@ -1,3 +1,4 @@
+#include <util/atomic.h>
 
 #include <lilos/task.hh>
 #include <lilos/util.hh>
@@ -185,7 +186,9 @@ void TaskList::remove(Task *task) {
 }
 
 void schedule(Task *task) {
-  readyList.append(task);
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    readyList.append(task);
+  }
 }
 
 void dump1(Task *task, uint8_t indentLevel) {
@@ -241,8 +244,11 @@ msg_t send(Task *target, msg_t message) {
 
   Task *me = currentTask;
   me->message() = message;
-  me->detach();
-  target->waiters().append(me);
+  
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    me->detach();
+    target->waiters().append(me);
+  }
 
   yieldTo(next);
 
@@ -257,8 +263,10 @@ Task *receive() {
 
 void answer(Task *sender, msg_t response) {
   sender->message() = response;
-  sender->detach();
-  schedule(sender);
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    sender->detach();
+    schedule(sender);
+  }
 }
 
 }  // namespace lilos
