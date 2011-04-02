@@ -114,4 +114,20 @@ void taskDump();
 
 }  // namespace lilos
 
+/*
+ * This convenience macro declares a task's control structure, stack, and main
+ * routine, all in one go.  It's intended to be used like this:
+ *
+ *  TASK(myTask, 64) {
+ *    while (1) {
+ *      do work
+ *    }
+ *  }
+ */
+#define TASK(name, stackSize) \
+  uint8_t name ## Stack[stackSize]; \
+  NORETURN name ## Main(void); \
+  lilos::Task name(name ## Main, name ## Stack, stackSize); \
+  NORETURN name ## Main ()
+
 #endif  // LILOS_TASK_HH_

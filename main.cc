@@ -25,8 +25,7 @@ static void debug(uint8_t signal) {
   }
 }
 
-uint8_t serverStack[128];
-void serverMain() {
+TASK(serverTask, 128) {
   while (1) {
     lilos::Task *sender = lilos::receive();
     led.setValue(sender->message());
@@ -34,10 +33,8 @@ void serverMain() {
     lilos::yield();
   }
 }
-static lilos::Task serverTask(serverMain, serverStack, 128);
 
-uint8_t debugStack[128];
-void debugMain() {
+TASK(debugTask, 128) {
   lilos::IntervalTimer timer(1000);
   while (1) {
     lilos::taskDump();
@@ -45,8 +42,7 @@ void debugMain() {
   }
 }
 
-uint8_t flashStack[128];
-void flashMain() {
+TASK(flashTask, 128) {
   lilos::IntervalTimer timer(500);
   while (1) {
     debugWrite_P(PSTR("on\r"));
@@ -57,9 +53,6 @@ void flashMain() {
     timer.wait();
   }
 }
-
-static lilos::Task flashTask(flashMain, flashStack, 128);
-static lilos::Task debugTask(debugMain, debugStack, 128);
 
 int main() {
   lilos::timeInit();
