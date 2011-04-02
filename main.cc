@@ -60,6 +60,7 @@ int main() {
   sei();
 
   led.setDirection(lilos::port::OUT);
+  _delay_ms(1000);
 
   schedule(&debugTask);
   schedule(&flashTask);
