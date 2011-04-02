@@ -93,6 +93,7 @@ public:
   Task *prev();
 
   Task *nextNonAtomic() { return _next; }
+  Task *prevNonAtomic() { return _prev; }
 
   msg_t &message() { return _message; }
   TaskList &waiters() { return _waiters; }

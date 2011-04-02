@@ -1,4 +1,5 @@
 #include <util/atomic.h>
+#include <avr/sleep.h>
 
 #include <lilos/atomic.hh>
 #include <lilos/task.hh>
@@ -12,6 +13,21 @@ static TaskList readyList;
 static Task * volatile _currentTask = 0;
 
 Task *currentTask() { return _currentTask; }
+
+TASK(idleTask, 32) {
+  cli();
+  while (1) {
+    if (_currentTask->nextNonAtomic() || _currentTask->prevNonAtomic()) {
+      yield();
+    } else {
+      sleep_enable();
+      sei();
+      sleep_cpu();
+      cli();
+      sleep_disable();
+    }
+  }
+}
 
 /*
  * Context save/restore
@@ -94,6 +110,7 @@ static ALWAYS_INLINE void restoreContext(stack_t sp) {
 }
 
 NORETURN startTasking() {
+  schedule(&idleTask);
   _currentTask = readyList.head();
   restoreContext(_currentTask->sp());
   
