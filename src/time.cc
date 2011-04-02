@@ -8,6 +8,7 @@
 namespace lilos {
 
 static uint32_t timerTicks = 0;
+static TaskList timerTaskList;
 
 TASK(timerTask, 64) {
   Task *me = currentTask();
@@ -20,7 +21,7 @@ TASK(timerTask, 64) {
       if (time - deadline < numeric_limits<int32_t>::max / 2) answer(t, 0);
       t = next;
     }
-    detachAndYield();
+    send(&timerTaskList, 0);
   }
 }
 
@@ -29,6 +30,8 @@ void timeInit() {
   TCCR2B = 6;  // clk/256
   TIMSK2 = _BV(OCIE2A);  // interrupt on match
   OCR2A = F_CPU / 1000 / 256 - 1;
+
+  timerTaskList.appendAtomic(&timerTask);
 }
 
 uint32_t ticks() {
@@ -56,5 +59,6 @@ using namespace lilos;
 
 void TIMER2_COMPA_vect() {
   timerTicks++;
-  schedule(&timerTask);
+  Task *tt = timerTaskList.headNonAtomic();
+  if (tt) answer(tt, 0);
 }

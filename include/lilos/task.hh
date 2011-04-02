@@ -117,9 +117,6 @@ void schedule(Task *);
 NORETURN startTasking();
 void NEVER_INLINE yield();
 
-// Removes this task from the ready list and yields.
-void detachAndYield();
-
 void taskDump();
 
 }  // namespace lilos
