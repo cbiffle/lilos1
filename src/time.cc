@@ -1,15 +1,25 @@
 #include <avr/io.h>
-#include <util/atomic.h>
 
+#include <lilos/atomic.hh>
 #include <lilos/time.hh>
 #include <lilos/task.hh>
+#include <lilos/limits.hh>
 
 namespace lilos {
 
 static uint32_t timerTicks = 0;
 
-TASK(timerTask, 32) {
+TASK(timerTask, 64) {
+  Task *me = currentTask();
   while (1) {
+    Task *t = me->waiters().head();
+    uint32_t time = ticks();
+    while (t) {
+      Task *next = t->next();
+      uint32_t deadline = *reinterpret_cast<uint32_t *>(t->message());
+      if (time - deadline < numeric_limits<int32_t>::max / 2) answer(t, 0);
+      t = next;
+    }
     detachAndYield();
   }
 }
@@ -22,12 +32,13 @@ void timeInit() {
 }
 
 uint32_t ticks() {
-  return timerTicks;
+  ATOMIC {
+    return timerTicks;
+  }
 }
 
 void sleepUntil(uint32_t deadline) {
-  while (deadline < ticks()) yield();
-  while (deadline > ticks()) yield();
+  send(&timerTask, (msg_t) &deadline);
 }
 
 IntervalTimer::IntervalTimer(uint16_t interval)
