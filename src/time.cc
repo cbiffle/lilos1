@@ -8,6 +8,12 @@ namespace lilos {
 
 static uint32_t timerTicks = 0;
 
+TASK(timerTask, 32) {
+  while (1) {
+    detachAndYield();
+  }
+}
+
 void timeInit() {
   TCCR2A = 2;  // CTC mode
   TCCR2B = 6;  // clk/256
@@ -35,6 +41,9 @@ void IntervalTimer::wait() {
 
 }  // namespace lilos
 
+using namespace lilos;
+
 void TIMER2_COMPA_vect() {
-  lilos::timerTicks++;
+  timerTicks++;
+  schedule(&timerTask);
 }

@@ -132,6 +132,12 @@ void NEVER_INLINE yield() {
   restoreContext(newTask->sp());
 }
 
+void detachAndYield() {
+  Task *next = nextTask();
+  currentTask->detach();
+  yieldTo(next);
+}
+
 #define _PUSH(x) *(sp--) = (uint8_t) (x)
 static const uint8_t kSregIntEnabled = 0x80;
 Task::Task(main_t entry, uint8_t *stack, size_t stackSize)
@@ -177,6 +183,8 @@ Task *TaskList::tail() {
 
 void TaskList::appendAtomic(Task *task) {
   ATOMIC {
+    if (task->_container) return;
+
     task->_prev = _tail;
     task->_next = 0;
     task->_container = this;
