@@ -7,20 +7,19 @@
  * General use:
  *  1. Create one or more Tasks.
  *  2. Call schedule() for each task.
- *  3. Call startTasking.
- *  4. To pass control to another task, call yield().
+ *  3. Call startTasking().
+ *  4. To pass control to another task, call yield() or use send().
  *
  * New tasks can be created at any time, simply by constructing a Task object
  * and calling schedule().  The task will be in the rotation at the next call to
- * yield() or startTasking().
- *
- * Tasks cannot be *removed* from scheduling at this time.
+ * yield(), send(), or startTasking().
  */
 
 #include <stdint.h>
 #include <stddef.h>
 
 #include <lilos/util.hh>
+#include <lilos/atomic.hh>
 
 namespace lilos {
 
@@ -35,6 +34,15 @@ typedef NORETURN (*main_t)();
 typedef uintptr_t msg_t;
 
 class Task;
+
+/*
+ * A list of tasks, as its name implies.  TaskList is used for queueing tasks
+ * that share a common state: the central Ready List, wait queues, etc.
+ *
+ * TaskLists are doubly-linked, with the link pointers stored in the Tasks
+ * themselves.  By implication, a Task can only belong to a single TaskList at
+ * a given time.
+ */
 class TaskList {
   Task * volatile _head;
   Task * volatile _tail;
@@ -42,16 +50,37 @@ class TaskList {
 public:
   TaskList() : _head(0), _tail(0) {}
 
+  // Atomically retrieves the first task.
   Task *head();
+  // Atomically retrieves the last task.
   Task *tail();
+  // Atomically checks whether the list is empty.
   bool empty() { return !head(); }
 
+  /*
+   * Ensures that the given Task is in this list.  If the Task was not
+   * previously in the list, it becomes the new last element.  If it was already
+   * in the list, its position is unchanged.
+   */
+  void appendAtomic(Task *);
+
+  /*
+   * Ensures that the given Task is not in this list.  If the Task was in the
+   * list, it is removed; otherwise, nothing changes.
+   */
+  void removeAtomic(Task *);
+
+  /*
+   * Like head(), but not atomic.  This is only safe for use in ISRs or in
+   * contexts where interrupts are disabled.  When in doubt, use head().
+   */
   Task *headNonAtomic() { return _head; }
 
-  void appendAtomic(Task *);
-  void removeAtomic(Task *);
 };
 
+/*
+ * A single thread of control, with dedicated stack.
+ */
 class Task {
   /*
    * Each task has its own stack pointer and code pointer.  When the task is
@@ -64,11 +93,14 @@ class Task {
   stack_t _sp;
 
   /*
-   * Each task is a member of a TaskList, which is a doubly-linked list of
-   * tasks in some common state.  These pointers contain the links.
+   * Links for the containing TaskList, if any.  _next and _prev will be NULL
+   * iff this task is the last or first in the list (respectively) or the task
+   * is not a member of any list (in which case _container is also NULL).
    */
   Task * volatile _next;
   Task * volatile _prev;
+
+  // A pointer to the containing TaskList, or NULL.
   TaskList * volatile _container;
 
   /*
@@ -85,19 +117,49 @@ class Task {
   msg_t _message;
 
 public:
+  /*
+   * Prepares a new Task, but does not schedule it.  (See schedule(), below.)
+   *
+   *  entry: a pointer to the Task's outer loop function, which must not return.
+   *  stack: a pointer to the *lowest* address in the task's stack area.
+   *  stackSize: number of bytes in the stack area.
+   */
   Task(main_t entry, uint8_t *stack, size_t stackSize);
 
+  // Returns the stack pointer.  Only valid if the Task is not running.
   stack_t &sp() { return _sp; }
 
+  /*
+   * next() and prev() atomically retrieve the next or previous task in the
+   * containing list, respectively.  next() and prev() will return NULL if this
+   * Task is last or first in the list (respectively) or if this Task is not a
+   * member of any list.
+   */
   Task *next();
   Task *prev();
 
+  /*
+   * Like next() and prev(), but not atomic.  These are only safe for use from
+   * ISRs or in contexts where interrupts are disabled.  If in doubt, do not
+   * use.
+   */
   Task *nextNonAtomic() { return _next; }
   Task *prevNonAtomic() { return _prev; }
 
+  /*
+   * Returns a reference to this task's messaging slot.  If the task is blocked
+   * sending a message, the slot contains the message being sent.  Otherwise,
+   * it contains the value returned by the last completed message.
+   */
   msg_t &message() { return _message; }
+
+  // The list containing all tasks blocked sending messages to this task.
   TaskList &waiters() { return _waiters; }
 
+  /*
+   * Removes this Task from its containing list.  If the Task is not a member
+   * of any list, horrible things will happen (TODO FIX).
+   */
   void detach() { _container->removeAtomic(this); }
 
   friend class TaskList;
@@ -105,18 +167,85 @@ public:
 
 
 /*
- * Messaging
+ * Basic Task API
+ */
+
+/*
+ * If the given Task is not in any TaskList, adds it to the Ready List, so that
+ * it will execute on some future blocking call.  Otherwise -- including if the
+ * Task is already in the Ready List -- nothing changes.
+ *
+ * This function's effects are atomic.
+ */
+void schedule(Task *);
+
+/*
+ * Permanently abandons the calling program and starts running Tasks from the
+ * Ready List instead.  This is only safe to call once, during startup.
+ */
+NORETURN startTasking();
+
+/*
+ * Pauses execution of the calling Task, allowing some other Task from the
+ * Ready List to run.
+ */
+void NEVER_INLINE yield();
+
+// Returns a pointer the currently executing Task.
+Task *currentTask();
+
+/*
+ * Synchronous messaging support
+ *
+ * Example server task that increments numbers:
+ *
+ *  TASK(incrementer, 32) {
+ *    while (1) {
+ *      Task *sender = receive();
+ *      msg_t input = sender->message();
+ *      answer(sender, input + 1);
+ *    }
+ *  }
+ *
+ * Example client library function:
+ *
+ *  uint16_t increment(uint16_t input) {
+ *    return (uint16_t) send(incrementer, (msg_t) input);
+ *  }
+ */
+
+/*
+ * Messages can be sent to a specific Task, or to a TaskList.  In the latter
+ * case, the sender queues itself on the TaskList, which may be serviced at a
+ * later date by some other Task.  This can be used to implement mutexes, for
+ * example.
+ *
+ * In either case, the sending Task blocks until some other Task wakes it up
+ * using answer().  When the sender wakes up, the value returned by send() will
+ * be the same one passed to answer().
  */
 msg_t send(Task *, msg_t);
 msg_t send(TaskList *, msg_t);
+
+/*
+ * Returns the Task that has been waiting longest to send a message to the
+ * current task.  This is a convenience function for the common case of handling
+ * senders in FIFO order; it is equivalent to
+ *
+ *  currentTask()->waiters().head()
+ *
+ * Note that receive() does not remove the sender from the queue.  Calling it
+ * repeatedly, without calling answer() or manually manipulating the queue, will
+ * return the same Task every time.
+ */
 Task *receive();
+
+/*
+ * Wakes a Task from send(), with the given return value.
+ */
 void answer(Task *, msg_t);
 
-Task *currentTask();
-void schedule(Task *);
-NORETURN startTasking();
-void NEVER_INLINE yield();
-
+// For debugging only: writes task info using the debug API.
 void taskDump();
 
 }  // namespace lilos
