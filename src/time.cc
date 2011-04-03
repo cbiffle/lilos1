@@ -20,7 +20,7 @@ static TaskList timerTaskList;
  * The timerTask wakes up once per millisecond (see the ISR at the end of this
  * file) and looks for expired deadlines.  It wakes up any tasks it finds.
  */
-TASK(timerTask, 64) {
+TASK(timerTask, 32) {
   Task *me = currentTask();
   while (1) {
     Task *t = me->waiters().head();
