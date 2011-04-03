@@ -23,9 +23,7 @@ struct UsartCmd {
   size_t len;
 };
 
-static const size_t kUsartTaskStackSize = 32;
-static uint8_t usartTaskStack[kUsartTaskStackSize];
-static NORETURN usartTaskMain() {
+TASK(usartTask, 32) {
   while (1) {
     lilos::Task *sender = lilos::receive();
     const UsartCmd *cmd = (const UsartCmd *) sender->message();
@@ -43,8 +41,6 @@ static NORETURN usartTaskMain() {
     lilos::answer(sender, 1);
   }
 }
-
-static lilos::Task usartTask(usartTaskMain, usartTaskStack, kUsartTaskStackSize);
 
 void usart_init_raw(uint16_t ubrr) {
   UBRR0H = ubrr >> 8;
