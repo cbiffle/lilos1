@@ -64,6 +64,12 @@ TASK(flashTask, 64) {
   }
 }
 
+TASK(echoTask, 32) {
+  while (1) {
+    usart_send(usart_recv());
+  }
+}
+
 NORETURN main() {
   lilos::timeInit();
   lilos::debugInit();
@@ -74,6 +80,7 @@ NORETURN main() {
   schedule(&debugTask);
   schedule(&flashTask);
   schedule(&serverTask);
+  schedule(&echoTask);
 
   lilos::startTasking();
 }

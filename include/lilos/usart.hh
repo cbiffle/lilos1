@@ -26,6 +26,7 @@ inline void usart_init() {
   usart_init_raw(ubrr32);
 }
 
+uint8_t usart_recv();
 void usart_send(uint8_t);
 void usart_send(const uint8_t *, size_t);
 void usart_send_P(const prog_char *, size_t);

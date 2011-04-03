@@ -11,63 +11,62 @@
 #include <lilos/usart.hh>
 #include <lilos/task.hh>
 
-struct UsartCmd {
-  enum {
-    RAM,
-    FLASH,
-  } space;
-  union {
-    const uint8_t *ram_src;
-    const prog_char *flash_src;
-  };
-  size_t len;
-};
-
-TASK(usartTask, 32) {
-  while (1) {
-    lilos::Task *sender = lilos::receive();
-    const UsartCmd *cmd = sender->message<const UsartCmd *>();
-    if (cmd->space == UsartCmd::RAM) {
-      for (size_t n = 0; n < cmd->len; n++) {
-        UDR0 = cmd->ram_src[n];
-        while (!(UCSR0A & (1 << UDRE0))) lilos::yield();
-      }
-    } else {
-      for (size_t n = 0; n < cmd->len; n++) {
-        UDR0 = pgm_read_byte(&(cmd->flash_src[n]));
-        while (!(UCSR0A & (1 << UDRE0))) lilos::yield();
-      }
-    }
-    lilos::answerVoid(sender);
-  }
-}
+static lilos::TaskList transmitTasks;
+static lilos::TaskList receiveTasks;
 
 void usart_init_raw(uint16_t ubrr) {
   UBRR0H = ubrr >> 8;
   UBRR0L = ubrr;
   // The bootloader doesn't reliably reset this to defaults.
   UCSR0A = 0;
-  UCSR0B = (1 << TXEN0);   // Transmitter on.
+  UCSR0B = _BV(TXEN0) | _BV(RXEN0)  // Transmitter and receiver on.
+         | _BV(RXCIE0);             // Receive interrupt enabled.
   UCSR0C = (1 << USBS0)    // 2 stop bits.
          | (3 << UCSZ00);  // 8 data bits.
 
-  lilos::schedule(&usartTask);
 }
 
 void usart_send(const uint8_t *src, size_t len) {
-  UsartCmd cmd = { UsartCmd::RAM };
-  cmd.ram_src = src;
-  cmd.len = len;
-  lilos::sendPtr(&usartTask, &cmd);
+  for (size_t i = 0; i < len; i++) {
+    usart_send(src[i]);
+  }
 }
 
 void usart_send_P(const prog_char *src, size_t len) {
-  UsartCmd cmd = { UsartCmd::FLASH };
-  cmd.flash_src = src;
-  cmd.len = len;
-  lilos::sendPtr(&usartTask, &cmd);
+  for (size_t i = 0; i < len; i++) {
+    usart_send(pgm_read_byte(&src[i]));
+  }
 }
 
 void usart_send(uint8_t b) {
-  usart_send(&b, 1);
+  ATOMIC {
+    // Enable UDRE interrupt.
+    UCSR0B |= _BV(UDRIE0);
+    lilos::send(&transmitTasks, b);
+  }
+}
+
+uint8_t usart_recv() {
+  ATOMIC {
+    if (UCSR0A & _BV(RXC0)) {
+      return UDR0;
+    }
+
+    return lilos::sendVoid(&receiveTasks);
+  }
+}
+
+ISR(USART_UDRE_vect) {
+  if (!transmitTasks.headNonAtomic()) {
+    UCSR0B &= ~_BV(UDRIE0);
+  } else {
+    lilos::Task *sender = transmitTasks.headNonAtomic();
+    UDR0 = sender->message();
+    lilos::answerVoid(sender);
+  }
+}
+
+ISR(USART_RX_vect) {
+  lilos::Task *t = receiveTasks.headNonAtomic();
+  if (t) lilos::answer(t, UDR0);
 }
