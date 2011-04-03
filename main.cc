@@ -15,7 +15,7 @@ using lilos::debugWrite;
 using lilos::debugWrite_P;
 using lilos::debugLn;
 
-static const lilos::port::Pin led = { lilos::port::B, _BV(5) };
+static const lilos::port::Pin led = PIN(B, 5);
 
 static void debug(uint8_t signal) {
   for (int i = 0; i < 8; i++) {

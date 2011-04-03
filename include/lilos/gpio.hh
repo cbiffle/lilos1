@@ -1,6 +1,24 @@
 #ifndef LILOS_GPIO_HH_
 #define LILOS_GPIO_HH_
 
+/*
+ * Describes the AVR's GPIO pins.  The classes and functions here are carefully
+ * designed to compile away for the most common use cases.  For example, a 
+ * sequence like this:
+ *
+ *  static const port::Pin led = PIN(B, 5);
+ *
+ *  void turnOn() {
+ *    led.setValue(true);
+ *  }
+ *
+ * This compiles to a single sbi instruction, and the led definition is compiled
+ * away, saving RAM.
+ *
+ * This file uses ALWAYS_INLINE aggressively, because gcc at -Os tends not to
+ * inline these functions...which greatly increases code size!
+ */
+
 #include <avr/io.h>
 
 namespace lilos {
@@ -8,11 +26,6 @@ namespace lilos {
 namespace port {
 
 typedef uint8_t port_base_t;
-
-// By default we compile at -Os, which makes the inlining heuristics more
-// conservative...and actually makes the code larger.  This attribute lets
-// us subvert the compiler.
-#define ALWAYS_INLINE inline __attribute__((always_inline))
 
 enum Direction { IN = 0, OUT = 1 };
 
@@ -68,11 +81,10 @@ enum {
   D = 9,
 };
 
-#define FASTPIN(P,N) ((lilos::port::Pin) { lilos::port::P, _BV(N) })
+#define PIN(P,N) { lilos::port::P, _BV(N) }
 
 };  // namespace port
 
 }  // namespace lilos
 
 #endif // LILOS_GPIO_HH_
-
