@@ -11,8 +11,10 @@
 #include <lilos/usart.hh>
 #include <lilos/task.hh>
 
-static lilos::TaskList transmitTasks;
-static lilos::TaskList receiveTasks;
+namespace lilos {
+
+static TaskList transmitTasks;
+static TaskList receiveTasks;
 
 void usart_init_raw(uint16_t ubrr) {
   UBRR0H = ubrr >> 8;
@@ -42,7 +44,7 @@ void usart_send(uint8_t b) {
   ATOMIC {
     // Enable UDRE interrupt.
     UCSR0B |= _BV(UDRIE0);
-    lilos::send(&transmitTasks, b);
+    send(&transmitTasks, b);
   }
 }
 
@@ -52,21 +54,25 @@ uint8_t usart_recv() {
       return UDR0;
     }
 
-    return lilos::sendVoid(&receiveTasks);
+    return sendVoid(&receiveTasks);
   }
 }
+
+}  // namespace lilos
+
+using namespace lilos;
 
 ISR(USART_UDRE_vect) {
   if (!transmitTasks.headNonAtomic()) {
     UCSR0B &= ~_BV(UDRIE0);
   } else {
-    lilos::Task *sender = transmitTasks.headNonAtomic();
+    Task *sender = transmitTasks.headNonAtomic();
     UDR0 = sender->message();
-    lilos::answerVoid(sender);
+    answerVoid(sender);
   }
 }
 
 ISR(USART_RX_vect) {
-  lilos::Task *t = receiveTasks.headNonAtomic();
-  if (t) lilos::answer(t, UDR0);
+  Task *t = receiveTasks.headNonAtomic();
+  if (t) answer(t, UDR0);
 }

@@ -66,7 +66,7 @@ TASK(flashTask, 64) {
 
 TASK(echoTask, 32) {
   while (1) {
-    usart_send(usart_recv());
+    lilos::usart_send(lilos::usart_recv());
   }
 }
 
