@@ -192,6 +192,13 @@ Task *Task::prev() {
   ATOMIC { return _prev; }
 }
 
+void Task::detach() {
+  TaskList *c;
+  ATOMIC { c = _container; }
+  if (!c) return;
+  _container->removeAtomic(this);
+}
+
 Task *TaskList::head() {
   ATOMIC { return _head; }
 }

@@ -158,9 +158,9 @@ public:
 
   /*
    * Removes this Task from its containing list.  If the Task is not a member
-   * of any list, horrible things will happen (TODO FIX).
+   * of any list, nothing changes.
    */
-  void detach() { _container->removeAtomic(this); }
+  void detach();
 
   friend class TaskList;
 };
