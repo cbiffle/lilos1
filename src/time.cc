@@ -32,7 +32,7 @@ TASK(timerTask, 32) {
       if (time - deadline < numeric_limits<int32_t>::max / 2) answerVoid(t);
       t = next;
     }
-    send(&timerTaskList, 0);
+    sendVoid(&timerTaskList);
   }
 }
 

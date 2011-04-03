@@ -247,6 +247,8 @@ Task *currentTask();
  */
 msg_t send(Task *, msg_t);
 msg_t send(TaskList *, msg_t);
+msg_t sendVoid(Task *);
+msg_t sendVoid(TaskList *);
 
 /*
  * Convenience templates for send that take pointer values.

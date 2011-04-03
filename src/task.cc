@@ -275,14 +275,22 @@ Task *currentTask() { return _currentTask; }
  */
 
 msg_t send(Task *target, msg_t message) {
-  return send(&target->waiters(), message);
+  _currentTask->setMessage(message);
+  return sendVoid(&target->waiters());
+}
+
+msg_t sendVoid(Task *target) {
+  return sendVoid(&target->waiters());
 }
 
 msg_t send(TaskList *target, msg_t message) {
+  _currentTask->setMessage(message);
+  return sendVoid(target);
+}
+
+msg_t sendVoid(TaskList *target) {
   // Gotta do this and store the result before calling detach()
   Task *next = nextTask();
-
-  _currentTask->setMessage(message);
   
   _currentTask->detach();
   target->appendAtomic(_currentTask);
