@@ -289,15 +289,17 @@ msg_t send(TaskList *target, msg_t message) {
 }
 
 msg_t sendVoid(TaskList *target) {
-  // Gotta do this and store the result before calling detach()
-  Task *next = nextTask();
+  ATOMIC {
+    // Gotta do this and store the result before calling detach()
+    Task *next = nextTask();
   
-  _currentTask->detach();
-  target->appendAtomic(_currentTask);
+    _currentTask->detach();
+    target->appendAtomic(_currentTask);
 
-  yieldTo(next);
+    yieldTo(next);
 
-  return _currentTask->message();
+    return _currentTask->message();
+  }
 }
 
 Task *receive() {
