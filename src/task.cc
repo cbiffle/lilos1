@@ -299,6 +299,10 @@ Task *receive() {
 
 void answer(Task *sender, msg_t response) {
   sender->setMessage(response);
+  answerVoid(sender);
+}
+
+void answerVoid(Task *sender) {
   sender->detach();
   schedule(sender);
 }

@@ -38,7 +38,7 @@ TASK(usartTask, 32) {
         while (!(UCSR0A & (1 << UDRE0))) lilos::yield();
       }
     }
-    lilos::answer(sender, 1);
+    lilos::answerVoid(sender);
   }
 }
 

@@ -32,7 +32,7 @@ TASK(serverTask, 32) {
   while (1) {
     lilos::Task *sender = lilos::receive();
     led.setValue(sender->message());
-    lilos::answer(sender, 0);
+    lilos::answerVoid(sender);
   }
 }
 

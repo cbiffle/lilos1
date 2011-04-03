@@ -293,6 +293,9 @@ Task *receive();
  */
 void answer(Task *, msg_t);
 
+// Convenience version of answer for senders who don't care about the result.
+void answerVoid(Task *);
+
 // For debugging only: writes task info using the debug API.
 void taskDump();
 

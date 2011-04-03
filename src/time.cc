@@ -29,7 +29,7 @@ TASK(timerTask, 32) {
       Task *next = t->next();  // Cache this in case we answer and change it.
       uint32_t deadline = *t->message<uint32_t *>();
       // Hack: we assume that no deadline will be 2^30 milliseconds from now.
-      if (time - deadline < numeric_limits<int32_t>::max / 2) answer(t, 0);
+      if (time - deadline < numeric_limits<int32_t>::max / 2) answerVoid(t);
       t = next;
     }
     send(&timerTaskList, 0);
@@ -72,5 +72,5 @@ void TIMER2_COMPA_vect() {
   timerTicks++;
   // Check to see if the timerTask is waiting for us.  If so, unblock it.
   Task *tt = timerTaskList.headNonAtomic();
-  if (tt) answer(tt, 0);
+  if (tt) answerVoid(tt);
 }
