@@ -263,12 +263,8 @@ NEVER_INLINE void yieldTo(Task *next) {
   restoreContext(_currentTask->sp());
 }
 
-void NEVER_INLINE yield() {
-  if (!_currentTask) return;
-  saveContextAndDisableInterrupts(&_currentTask->sp());
-  Task *newTask = nextTask_interruptsDisabled();
-  _currentTask = newTask;
-  restoreContext(newTask->sp());
+void yield() {
+  yieldTo(nextTask());
 }
 
 Task *currentTask() { return _currentTask; }

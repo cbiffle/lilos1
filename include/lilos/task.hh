@@ -210,7 +210,7 @@ NORETURN startTasking();
  * Pauses execution of the calling Task, allowing some other Task from the
  * Ready List to run.
  */
-void NEVER_INLINE yield();
+void yield();
 
 // Returns a pointer the currently executing Task.
 Task *currentTask();
