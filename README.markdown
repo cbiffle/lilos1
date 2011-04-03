@@ -13,5 +13,5 @@ There's a working example in `main.cc`.  It assumes an Arduino-style
 configuration where an LED is connected to Port B 5.  It starts three user tasks
 and demonstrates inter-task messaging and use of the USART.
 
-It currently uses 2772 bytes of Flash and 404 bytes of RAM.  I hope to reduce
+It currently uses 2650 bytes of Flash and 372 bytes of RAM.  I hope to reduce
 both numbers now that everything works.
