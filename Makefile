@@ -7,6 +7,7 @@ DUDE=avrdude
 PORT=/dev/tty.usbserial-FTE597U5
 
 CFLAGS= -Iinclude \
+        -D__STDC_LIMIT_MACROS \
         -std=gnu++98 \
         -Os \
         -DF_CPU=8000000 \
