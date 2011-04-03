@@ -16,14 +16,19 @@ namespace lilos {
 static uint32_t timerTicks = 0;
 static TaskList timerTaskList;
 
+/*
+ * The timerTask wakes up once per millisecond (see the ISR at the end of this
+ * file) and looks for expired deadlines.  It wakes up any tasks it finds.
+ */
 TASK(timerTask, 64) {
   Task *me = currentTask();
   while (1) {
     Task *t = me->waiters().head();
     uint32_t time = ticks();
     while (t) {
-      Task *next = t->next();
+      Task *next = t->next();  // Cache this in case we answer and change it.
       uint32_t deadline = *reinterpret_cast<uint32_t *>(t->message());
+      // Hack: we assume that no deadline will be 2^30 milliseconds from now.
       if (time - deadline < numeric_limits<int32_t>::max / 2) answer(t, 0);
       t = next;
     }
@@ -65,6 +70,7 @@ using namespace lilos;
 
 void TIMER2_COMPA_vect() {
   timerTicks++;
+  // Check to see if the timerTask is waiting for us.  If so, unblock it.
   Task *tt = timerTaskList.headNonAtomic();
   if (tt) answer(tt, 0);
 }
