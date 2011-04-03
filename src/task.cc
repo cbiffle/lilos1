@@ -9,25 +9,104 @@
 
 namespace lilos {
 
+// List containing all potentially runnable tasks.
 static TaskList readyList;
+
+// Pointer to currently executing task.
 static Task * volatile _currentTask = 0;
 
-Task *currentTask() { return _currentTask; }
+/*
+ * TaskList
+ */
 
-TASK(idleTask, 32) {
-  cli();
-  while (1) {
-    if (_currentTask->nextNonAtomic() || _currentTask->prevNonAtomic()) {
-      yield();
+Task *TaskList::head() {
+  ATOMIC { return _head; }
+}
+
+Task *TaskList::tail() {
+  ATOMIC { return _tail; }
+}
+
+void TaskList::appendAtomic(Task *task) {
+  ATOMIC {
+    if (task->_container) return;
+
+    task->_prev = _tail;
+    task->_next = 0;
+    task->_container = this;
+
+    if (_tail) {
+      _tail->_next = task;
     } else {
-      sleep_enable();
-      sei();
-      sleep_cpu();
-      cli();
-      sleep_disable();
+      _head = task;
     }
+    _tail = task;
   }
 }
+
+void TaskList::removeAtomic(Task *task) {
+  ATOMIC {
+    if (task->_container != this) return;
+
+    if (task->_prev) task->_prev->_next = task->_next;
+    if (task->_next) task->_next->_prev = task->_prev;
+
+    if (task == _head) _head = task->_next;
+    if (task == _tail) _tail = task->_prev;
+
+    task->_container = 0;
+    task->_prev = 0;
+    task->_next = 0;
+  }
+}
+
+
+/*
+ * Task
+ */
+
+#define _PUSH(x) *(sp--) = (uint8_t) (x)
+static const uint8_t kSregIntEnabled = 0x80;
+Task::Task(main_t entry, uint8_t *stack, size_t stackSize)
+  : _sp(0),
+    _next(0),
+    _prev(0) {
+  uint8_t *sp = stack + stackSize - 1;
+
+  // Code "return address" of entry routine
+  uintptr_t code = (uintptr_t) entry;
+  _PUSH(code);
+  _PUSH(code >> 8);
+
+  // Registers
+  _PUSH(0);  // r0
+  _PUSH(kSregIntEnabled);  // SREG
+  _PUSH(0);  // r1
+  for (int i = 2; i <= 17; i++) {
+    _PUSH(i);
+  }
+  _PUSH(28);
+  _PUSH(29);
+
+  _sp = sp;
+}
+#undef _PUSH
+
+Task *Task::next() {
+  ATOMIC { return _next; }
+}
+
+Task *Task::prev() {
+  ATOMIC { return _prev; }
+}
+
+void Task::detach() {
+  TaskList *c;
+  ATOMIC { c = _container; }
+  if (!c) return;
+  _container->removeAtomic(this);
+}
+
 
 /*
  * Context save/restore
@@ -109,6 +188,30 @@ static ALWAYS_INLINE void restoreContext(stack_t sp) {
   );
 }
 
+
+/*
+ * Task APIs
+ */
+
+void schedule(Task *task) {
+  readyList.appendAtomic(task);
+}
+
+TASK(idleTask, 32) {
+  cli();
+  while (1) {
+    if (_currentTask->nextNonAtomic() || _currentTask->prevNonAtomic()) {
+      yield();
+    } else {
+      sleep_enable();
+      sei();
+      sleep_cpu();
+      cli();
+      sleep_disable();
+    }
+  }
+}
+
 NORETURN startTasking() {
   schedule(&idleTask);
   _currentTask = readyList.head();
@@ -120,6 +223,7 @@ NORETURN startTasking() {
   asm volatile ("ret");
   while (1);
 }
+
 
 Task *nextTask() {
   Task *newTask = _currentTask->next();
@@ -157,92 +261,48 @@ void NEVER_INLINE yield() {
   restoreContext(newTask->sp());
 }
 
-#define _PUSH(x) *(sp--) = (uint8_t) (x)
-static const uint8_t kSregIntEnabled = 0x80;
-Task::Task(main_t entry, uint8_t *stack, size_t stackSize)
-  : _sp(0),
-    _next(0),
-    _prev(0) {
-  uint8_t *sp = stack + stackSize - 1;
+Task *currentTask() { return _currentTask; }
 
-  // Code "return address" of entry routine
-  uintptr_t code = (uintptr_t) entry;
-  _PUSH(code);
-  _PUSH(code >> 8);
 
-  // Registers
-  _PUSH(0);  // r0
-  _PUSH(kSregIntEnabled);  // SREG
-  _PUSH(0);  // r1
-  for (int i = 2; i <= 17; i++) {
-    _PUSH(i);
-  }
-  _PUSH(28);
-  _PUSH(29);
+/*
+ * Synchronous messaging API
+ */
 
-  _sp = sp;
-}
-#undef _PUSH
-
-Task *Task::next() {
-  ATOMIC { return _next; }
+msg_t send(Task *target, msg_t message) {
+  return send(&target->waiters(), message);
 }
 
-Task *Task::prev() {
-  ATOMIC { return _prev; }
+msg_t send(TaskList *target, msg_t message) {
+  // Gotta do this and store the result before calling detach()
+  Task *next = nextTask();
+
+  Task *me = _currentTask;
+  me->message() = message;
+  
+  me->detach();
+  target->appendAtomic(me);
+
+  yieldTo(next);
+
+  return _currentTask->message();
 }
 
-void Task::detach() {
-  TaskList *c;
-  ATOMIC { c = _container; }
-  if (!c) return;
-  _container->removeAtomic(this);
+Task *receive() {
+  Task *me = _currentTask;
+  while (me->waiters().empty()) yield();
+  return me->waiters().head();
 }
 
-Task *TaskList::head() {
-  ATOMIC { return _head; }
+void answer(Task *sender, msg_t response) {
+  sender->message() = response;
+  sender->detach();
+  schedule(sender);
 }
 
-Task *TaskList::tail() {
-  ATOMIC { return _tail; }
-}
 
-void TaskList::appendAtomic(Task *task) {
-  ATOMIC {
-    if (task->_container) return;
-
-    task->_prev = _tail;
-    task->_next = 0;
-    task->_container = this;
-
-    if (_tail) {
-      _tail->_next = task;
-    } else {
-      _head = task;
-    }
-    _tail = task;
-  }
-}
-
-void TaskList::removeAtomic(Task *task) {
-  ATOMIC {
-    if (task->_container != this) return;
-
-    if (task->_prev) task->_prev->_next = task->_next;
-    if (task->_next) task->_next->_prev = task->_prev;
-
-    if (task == _head) _head = task->_next;
-    if (task == _tail) _tail = task->_prev;
-
-    task->_container = 0;
-    task->_prev = 0;
-    task->_next = 0;
-  }
-}
-
-void schedule(Task *task) {
-  readyList.appendAtomic(task);
-}
+/*
+ * Debug API
+ */
 
 void dump1(Task *task, uint8_t indentLevel) {
   while (indentLevel--) {
@@ -289,37 +349,6 @@ void taskDump() {
   }
 
   debugWrite_P(PSTR("--- end task dump ---\r"));
-}
-
-msg_t send(Task *target, msg_t message) {
-  return send(&target->waiters(), message);
-}
-
-msg_t send(TaskList *target, msg_t message) {
-  // Gotta do this and store the result before calling detach()
-  Task *next = nextTask();
-
-  Task *me = _currentTask;
-  me->message() = message;
-  
-  me->detach();
-  target->appendAtomic(me);
-
-  yieldTo(next);
-
-  return _currentTask->message();
-}
-
-Task *receive() {
-  Task *me = _currentTask;
-  while (me->waiters().empty()) yield();
-  return me->waiters().head();
-}
-
-void answer(Task *sender, msg_t response) {
-  sender->message() = response;
-  sender->detach();
-  schedule(sender);
 }
 
 }  // namespace lilos
