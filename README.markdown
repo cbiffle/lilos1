@@ -10,8 +10,8 @@ The Example Program
 -------------------
 
 There's a working example in `main.cc`.  It assumes an Arduino-style
-configuration where an LED is connected to Port B 5.  It starts three user tasks
-and demonstrates inter-task messaging and use of the USART.
+configuration where an LED is connected to Port B 5.  It starts four user tasks
+and demonstrates inter-task messaging, GPIO, and use of the USART.
 
-It currently uses 2650 bytes of Flash and 372 bytes of RAM.  I hope to reduce
+It currently uses 2804 bytes of Flash and 384 bytes of RAM.  I hope to reduce
 both numbers now that everything works.
