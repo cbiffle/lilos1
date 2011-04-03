@@ -157,7 +157,22 @@ public:
    * sending a message, the slot contains the message being sent.  Otherwise,
    * it contains the value returned by the last completed message.
    */
-  msg_t &message() { return _message; }
+  msg_t message() { return _message; }
+
+  // Sets the task's messaging slot, e.g. to provide a response.
+  void setMessage(msg_t msg) { _message = msg; }
+
+  /*
+   * Convenience form of message() that deals with pointer types.
+   */
+  template<typename T>
+  T message() { return &*reinterpret_cast<T>(_message); }
+
+  /*
+   * Convenience form of setMessage() that deals with pointer types.
+   */
+  template<typename T>
+  void setMessage(T msg) { _message = reinterpret_cast<msg_t>(&*msg); }
 
   // The list containing all tasks blocked sending messages to this task.
   TaskList &waiters() { return _waiters; }
@@ -232,6 +247,33 @@ Task *currentTask();
  */
 msg_t send(Task *, msg_t);
 msg_t send(TaskList *, msg_t);
+
+/*
+ * Convenience templates for send that take pointer values.
+ */
+template <typename A, typename R>
+R *sendPtr(Task *t, A *arg) {
+  return send(t, reinterpret_cast<msg_t>(arg));
+}
+
+template <typename A, typename R>
+R *sendPtr(TaskList *tl, A *arg) {
+  return send(tl, reinterpret_cast<msg_t>(arg));
+}
+
+/*
+ * Further convenience templates that don't require a response.
+ */
+template <typename A>
+void sendPtr(Task *t, A *arg) {
+  send(t, reinterpret_cast<msg_t>(arg));
+}
+
+template <typename A>
+void sendPtr(TaskList *tl, A *arg) {
+  send(tl, reinterpret_cast<msg_t>(arg));
+}
+
 
 /*
  * Returns the Task that has been waiting longest to send a message to the

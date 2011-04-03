@@ -26,7 +26,7 @@ struct UsartCmd {
 TASK(usartTask, 32) {
   while (1) {
     lilos::Task *sender = lilos::receive();
-    const UsartCmd *cmd = (const UsartCmd *) sender->message();
+    const UsartCmd *cmd = sender->message<const UsartCmd *>();
     if (cmd->space == UsartCmd::RAM) {
       for (size_t n = 0; n < cmd->len; n++) {
         UDR0 = cmd->ram_src[n];
@@ -58,14 +58,14 @@ void usart_send(const uint8_t *src, size_t len) {
   UsartCmd cmd = { UsartCmd::RAM };
   cmd.ram_src = src;
   cmd.len = len;
-  lilos::send(&usartTask, (lilos::msg_t) &cmd);
+  lilos::sendPtr(&usartTask, &cmd);
 }
 
 void usart_send_P(const prog_char *src, size_t len) {
   UsartCmd cmd = { UsartCmd::FLASH };
   cmd.flash_src = src;
   cmd.len = len;
-  lilos::send(&usartTask, (lilos::msg_t) &cmd);
+  lilos::sendPtr(&usartTask, &cmd);
 }
 
 void usart_send(uint8_t b) {

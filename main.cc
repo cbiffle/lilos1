@@ -55,11 +55,11 @@ TASK(flashTask, 64) {
   lilos::IntervalTimer timer(500);
   while (1) {
     debugWrite_P(PSTR("on\r"));
-    lilos::send(&serverTask, 1);
+    lilos::send(&serverTask, true);
     timer.wait();
 
     debugWrite_P(PSTR("off\r"));
-    lilos::send(&serverTask, 0);
+    lilos::send(&serverTask, false);
     timer.wait();
   }
 }

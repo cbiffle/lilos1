@@ -27,7 +27,7 @@ TASK(timerTask, 64) {
     uint32_t time = ticks();
     while (t) {
       Task *next = t->next();  // Cache this in case we answer and change it.
-      uint32_t deadline = *reinterpret_cast<uint32_t *>(t->message());
+      uint32_t deadline = *t->message<uint32_t *>();
       // Hack: we assume that no deadline will be 2^30 milliseconds from now.
       if (time - deadline < numeric_limits<int32_t>::max / 2) answer(t, 0);
       t = next;
@@ -52,7 +52,7 @@ uint32_t ticks() {
 }
 
 void sleepUntil(uint32_t deadline) {
-  send(&timerTask, (msg_t) &deadline);
+  sendPtr(&timerTask, &deadline);
 }
 
 IntervalTimer::IntervalTimer(uint16_t interval)

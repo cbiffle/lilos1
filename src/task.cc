@@ -286,7 +286,7 @@ msg_t send(TaskList *target, msg_t message) {
   // Gotta do this and store the result before calling detach()
   Task *next = nextTask();
 
-  _currentTask->message() = message;
+  _currentTask->setMessage(message);
   
   _currentTask->detach();
   target->appendAtomic(_currentTask);
@@ -302,7 +302,7 @@ Task *receive() {
 }
 
 void answer(Task *sender, msg_t response) {
-  sender->message() = response;
+  sender->setMessage(response);
   sender->detach();
   schedule(sender);
 }
