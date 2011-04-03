@@ -2,7 +2,7 @@
 #define __UART_HH__
 
 #include <stddef.h>
-#include <avr/pgmspace.h>
+#include <lilos/pgmspace.hh>
 #include <lilos/static_assert.hh>
 
 void usart_init_raw(uint16_t ubrr);

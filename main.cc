@@ -9,7 +9,7 @@
 #include <lilos/usart.hh>
 #include <lilos/time.hh>
 #include <lilos/debug.hh>
-#include <lilos/pgmspace.h>
+#include <lilos/pgmspace.hh>
 
 using lilos::debugWrite;
 using lilos::debugWrite_P;

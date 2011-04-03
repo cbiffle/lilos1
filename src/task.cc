@@ -5,7 +5,7 @@
 #include <lilos/task.hh>
 #include <lilos/util.hh>
 #include <lilos/debug.hh>
-#include <lilos/pgmspace.h>
+#include <lilos/pgmspace.hh>
 
 namespace lilos {
 

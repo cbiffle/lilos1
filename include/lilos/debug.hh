@@ -2,7 +2,7 @@
 #define LILOS_DEBUG_HH_
 
 #include <stdint.h>
-#include <avr/pgmspace.h>
+#include <lilos/pgmspace.hh>
 
 namespace lilos {
 

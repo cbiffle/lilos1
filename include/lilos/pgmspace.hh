@@ -1,6 +1,10 @@
 #ifndef LILOS_PGMSPACE_H_
 #define LILOS_PGMSPACE_H_
 
+/*
+ * A wrapper around the standard <avr/pgmspace.h> include.
+ */
+
 #include <avr/pgmspace.h>
 
 #ifdef __cplusplus
