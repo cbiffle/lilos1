@@ -37,12 +37,13 @@ void TaskList::appendAtomic(Task *task) {
   ATOMIC {
     if (task->_container) return;
 
-    task->_prev = _tail;
+    Task *t = _tail;  // Cache volatile field in a register.
+    task->_prev = t;
     task->_next = 0;
     task->_container = this;
 
-    if (_tail) {
-      _tail->_next = task;
+    if (t) {
+      t->_next = task;
     } else {
       _head = task;
     }
@@ -54,11 +55,13 @@ void TaskList::removeAtomic(Task *task) {
   ATOMIC {
     if (task->_container != this) return;
 
-    if (task->_prev) task->_prev->_next = task->_next;
-    if (task->_next) task->_next->_prev = task->_prev;
+    // Cache volatile fields in registers.
+    Task *p = task->_prev, *n = task->_next;
+    if (p) p->_next = n;
+    if (n) n->_prev = p;
 
-    if (task == _head) _head = task->_next;
-    if (task == _tail) _tail = task->_prev;
+    if (task == _head) _head = n;
+    if (task == _tail) _tail = p;
 
     task->_container = 0;
     task->_prev = 0;
@@ -110,7 +113,7 @@ void Task::detach() {
   TaskList *c;
   ATOMIC { c = _container; }
   if (!c) return;
-  _container->removeAtomic(this);
+  c->removeAtomic(this);
 }
 
 
@@ -220,8 +223,9 @@ TASK(idleTask, 32) {
 
 NORETURN startTasking() {
   schedule(&idleTask);
-  _currentTask = readyList.head();
-  restoreContext(_currentTask->sp());
+  Task *c = readyList.head();
+  _currentTask = c;
+  restoreContext(c->sp());
   
   // gcc is smart enough to recognize that this function does, in fact, return.
   // The code below is a total hack to fool it into allowing NORETURN here.
@@ -282,11 +286,10 @@ msg_t send(TaskList *target, msg_t message) {
   // Gotta do this and store the result before calling detach()
   Task *next = nextTask();
 
-  Task *me = _currentTask;
-  me->message() = message;
+  _currentTask->message() = message;
   
-  me->detach();
-  target->appendAtomic(me);
+  _currentTask->detach();
+  target->appendAtomic(_currentTask);
 
   yieldTo(next);
 
@@ -294,9 +297,8 @@ msg_t send(TaskList *target, msg_t message) {
 }
 
 Task *receive() {
-  Task *me = _currentTask;
-  while (me->waiters().empty()) yield();
-  return me->waiters().head();
+  while (_currentTask->waiters().empty()) yield();
+  return _currentTask->waiters().head();
 }
 
 void answer(Task *sender, msg_t response) {
