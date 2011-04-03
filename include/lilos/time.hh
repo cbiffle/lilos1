@@ -17,10 +17,16 @@ void timeInit();
 // Return the number of milliseconds since system start, mod 2^32.
 uint32_t ticks();
 
-// Waits for a particular time to pass.  To sleep for n milliseconds, use:
-//  sleepUntil(ticks() + time)
+/*
+ * Waits for a particular time to pass.  To sleep for n milliseconds, use:
+ *  sleepUntil(ticks() + time)
+ * IntervalTimer (below) makes this easy.
+ */
 void sleepUntil(uint32_t time);
 
+/*
+ * A simple timer for the common case of doing something every N milliseconds.
+ */
 class IntervalTimer {
   uint32_t _deadline;
   uint16_t _interval;
