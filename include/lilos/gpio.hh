@@ -1,3 +1,9 @@
+/*
+ * Copyright 2011 Cliff L. Biffle.
+ * Released under the Creative Commons Attribution-ShareAlike 3.0 License:
+ * http://creativecommons.org/licenses/by-sa/3.0/
+ */
+
 #ifndef LILOS_GPIO_HH_
 #define LILOS_GPIO_HH_
 
