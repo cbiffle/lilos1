@@ -291,7 +291,7 @@ msg_t send(TaskList *target, msg_t message) {
 msg_t sendVoid(TaskList *target) {
   ATOMIC {
     // Gotta do this and store the result before calling detach()
-    Task *next = nextTask();
+    Task *next = nextTask_interruptsDisabled();
   
     _currentTask->detach();
     target->appendAtomic(_currentTask);
