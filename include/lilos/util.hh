@@ -1,6 +1,10 @@
 #ifndef LILOS_UTIL_HH_
 #define LILOS_UTIL_HH_
 
+/*
+ * A few utility macros.
+ */
+
 // Use in place of a return type when declaring a function that won't return.
 #define NORETURN void __attribute__((noreturn))
 
