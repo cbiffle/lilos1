@@ -18,6 +18,9 @@ namespace lilos {
 // List containing all potentially runnable tasks.
 static TaskList readyList;
 
+// List containing all tasks blocked at receive().
+static TaskList receiverList;
+
 // Pointer to currently executing task.
 static Task * volatile _currentTask = 0;
 
@@ -276,10 +279,11 @@ Task *currentTask() { return _currentTask; }
 
 msg_t send(Task *target, msg_t message) {
   _currentTask->setMessage(message);
-  return sendVoid(&target->waiters());
+  return sendVoid(target);
 }
 
 msg_t sendVoid(Task *target) {
+  if (target->in(&receiverList)) answerVoid(target);
   return sendVoid(&target->waiters());
 }
 
@@ -303,8 +307,12 @@ msg_t sendVoid(TaskList *target) {
 }
 
 Task *receive() {
-  while (_currentTask->waiters().empty()) yield();
-  return _currentTask->waiters().head();
+  do {
+    Task *sender = _currentTask->waiters().head();
+    if (sender) return sender;
+
+    sendVoid(&receiverList);
+  } while (1);
 }
 
 void answer(Task *sender, msg_t response) {

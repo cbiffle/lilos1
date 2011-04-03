@@ -135,6 +135,9 @@ public:
   // Returns the stack pointer.  Only valid if the Task is not running.
   stack_t &sp() { return _sp; }
 
+  // Checks whether this task is in a certain TaskList.
+  bool in(TaskList *tl) { return _container == tl; }
+
   /*
    * next() and prev() atomically retrieve the next or previous task in the
    * containing list, respectively.  next() and prev() will return NULL if this
