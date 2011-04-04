@@ -27,7 +27,7 @@ static Task * volatile _currentTask = 0;
 /*
  * TaskList
  */
-void TaskList::append(Task *task) {
+NEVER_INLINE void TaskList::append(Task *task) {
   if (task->_container) return;
 
   Task *t = _tail;  // Cache volatile field in a register.
