@@ -183,6 +183,9 @@ public:
   /*
    * Removes this Task from its containing list.  If the Task is not a member
    * of any list, nothing changes.
+   *
+   * This function operates on task links in a non-atomic manner and must be
+   * called with interrupts disabled.
    */
   void detach();
 

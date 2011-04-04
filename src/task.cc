@@ -113,8 +113,7 @@ Task *Task::prev() {
 }
 
 void Task::detach() {
-  TaskList *c;
-  ATOMIC { c = _container; }
+  TaskList *c = _container;
   if (!c) return;
   c->removeAtomic(this);
 }
@@ -321,8 +320,10 @@ void answer(Task *sender, msg_t response) {
 }
 
 void answerVoid(Task *sender) {
-  sender->detach();
-  schedule(sender);
+  ATOMIC {
+    sender->detach();
+    schedule(sender);
+  }
 }
 
 
