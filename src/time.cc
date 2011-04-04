@@ -42,7 +42,7 @@ void timeInit() {
   TIMSK2 = _BV(OCIE2A);  // interrupt on match
   OCR2A = F_CPU / 1000 / 256 - 1;
 
-  timerTaskList.appendAtomic(&timerTask);
+  timerTaskList.append(&timerTask);
 }
 
 uint32_t ticks() {

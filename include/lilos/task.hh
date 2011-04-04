@@ -67,8 +67,11 @@ public:
    * Ensures that the given Task is in this list.  If the Task was not
    * previously in the list, it becomes the new last element.  If it was already
    * in the list, its position is unchanged.
+   *
+   * This function operates on task links in a non-atomic manner and must be
+   * called with interrupts disabled.
    */
-  void appendAtomic(Task *);
+  void append(Task *);
 
   /*
    * Ensures that the given Task is not in this list.  If the Task was in the

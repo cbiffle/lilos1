@@ -36,22 +36,20 @@ Task *TaskList::tail() {
   ATOMIC { return _tail; }
 }
 
-void TaskList::appendAtomic(Task *task) {
-  ATOMIC {
-    if (task->_container) return;
+void TaskList::append(Task *task) {
+  if (task->_container) return;
 
-    Task *t = _tail;  // Cache volatile field in a register.
-    task->_prev = t;
-    task->_next = 0;
-    task->_container = this;
+  Task *t = _tail;  // Cache volatile field in a register.
+  task->_prev = t;
+  task->_next = 0;
+  task->_container = this;
 
-    if (t) {
-      t->_next = task;
-    } else {
-      _head = task;
-    }
-    _tail = task;
+  if (t) {
+    t->_next = task;
+  } else {
+    _head = task;
   }
+  _tail = task;
 }
 
 void TaskList::removeAtomic(Task *task) {
@@ -205,7 +203,9 @@ static ALWAYS_INLINE void restoreContext(stack_t sp) {
  */
 
 void schedule(Task *task) {
-  readyList.appendAtomic(task);
+  ATOMIC {
+    readyList.append(task);
+  }
 }
 
 TASK(idleTask, 32) {
@@ -297,7 +297,7 @@ msg_t sendVoid(TaskList *target) {
     Task *next = nextTask_interruptsDisabled();
   
     _currentTask->detach();
-    target->appendAtomic(_currentTask);
+    target->append(_currentTask);
 
     yieldTo(next);
 
