@@ -76,8 +76,11 @@ public:
   /*
    * Ensures that the given Task is not in this list.  If the Task was in the
    * list, it is removed; otherwise, nothing changes.
+   *
+   * This function operates on task links in a non-atomic manner and must be
+   * called with interrupts disabled.
    */
-  void removeAtomic(Task *);
+  void remove(Task *);
 
   /*
    * Like head(), but not atomic.  This is only safe for use in ISRs or in
@@ -142,21 +145,16 @@ public:
   bool in(TaskList *tl) { return _container == tl; }
 
   /*
-   * next() and prev() atomically retrieve the next or previous task in the
-   * containing list, respectively.  next() and prev() will return NULL if this
-   * Task is last or first in the list (respectively) or if this Task is not a
-   * member of any list.
+   * next() and prev() retrieve the next or previous task in the containing
+   * list, respectively.  next() and prev() will return NULL if this Task is
+   * last or first in the list (respectively) or if this Task is not a member
+   * of any list.
+   *
+   * These functions operate on task links in a non-atomic manner and must be
+   * called with interrupts disabled.
    */
-  Task *next();
-  Task *prev();
-
-  /*
-   * Like next() and prev(), but not atomic.  These are only safe for use from
-   * ISRs or in contexts where interrupts are disabled.  If in doubt, do not
-   * use.
-   */
-  Task *nextNonAtomic() { return _next; }
-  Task *prevNonAtomic() { return _prev; }
+  Task *next() { return _next; }
+  Task *prev() { return _prev; }
 
   /*
    * Returns a reference to this task's messaging slot.  If the task is blocked

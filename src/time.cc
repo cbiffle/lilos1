@@ -26,7 +26,8 @@ TASK(timerTask, 32) {
     Task *t = me->waiters().head();
     uint32_t time = ticks();
     while (t) {
-      Task *next = t->next();  // Cache this in case we answer and change it.
+      Task *next;  // Cache this in case we answer and change it.
+      ATOMIC { next = t->next(); }
       uint32_t deadline = *t->message<uint32_t *>();
       // Hack: we assume that no deadline will be 2^30 milliseconds from now.
       if (time - deadline < numeric_limits<int32_t>::max / 2) answerVoid(t);
