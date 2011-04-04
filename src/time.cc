@@ -23,7 +23,8 @@ static TaskList timerTaskList;
 TASK(timerTask, 32) {
   Task *me = currentTask();
   while (1) {
-    Task *t = me->waiters().head();
+    Task *t;
+    ATOMIC { t = me->waiters().head(); }
     uint32_t time = ticks();
     while (t) {
       Task *next;  // Cache this in case we answer and change it.
@@ -72,6 +73,6 @@ using namespace lilos;
 void TIMER2_COMPA_vect() {
   timerTicks++;
   // Check to see if the timerTask is waiting for us.  If so, unblock it.
-  Task *tt = timerTaskList.headNonAtomic();
+  Task *tt = timerTaskList.head();
   if (tt) answerVoid(tt);
 }

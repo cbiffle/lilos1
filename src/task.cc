@@ -27,15 +27,6 @@ static Task * volatile _currentTask = 0;
 /*
  * TaskList
  */
-
-Task *TaskList::head() {
-  ATOMIC { return _head; }
-}
-
-Task *TaskList::tail() {
-  ATOMIC { return _tail; }
-}
-
 void TaskList::append(Task *task) {
   if (task->_container) return;
 
@@ -229,7 +220,7 @@ NORETURN startTasking() {
 
 Task *nextTask_interruptsDisabled() {
   Task *newTask = _currentTask->next();
-  if (!newTask) newTask = readyList.headNonAtomic();
+  if (!newTask) newTask = readyList.head();
   return newTask;
 }
 
@@ -295,8 +286,9 @@ msg_t sendVoid(TaskList *target) {
 }
 
 Task *receive() {
+  Task *sender;
   do {
-    Task *sender = _currentTask->waiters().head();
+    ATOMIC { sender = _currentTask->waiters().head(); }
     if (sender) return sender;
 
     sendVoid(&receiverList);

@@ -63,7 +63,7 @@ uint8_t usart_recv() {
 using namespace lilos;
 
 ISR(USART_UDRE_vect) {
-  Task *sender = transmitTasks.headNonAtomic();
+  Task *sender = transmitTasks.head();
   if (!sender) {
     UCSR0B &= ~_BV(UDRIE0);
   } else {
@@ -73,6 +73,6 @@ ISR(USART_UDRE_vect) {
 }
 
 ISR(USART_RX_vect) {
-  Task *t = receiveTasks.headNonAtomic();
+  Task *t = receiveTasks.head();
   if (t) answer(t, UDR0);
 }

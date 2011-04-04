@@ -56,11 +56,11 @@ class TaskList {
 public:
   TaskList() : _head(0), _tail(0) {}
 
-  // Atomically retrieves the first task.
-  Task *head();
-  // Atomically retrieves the last task.
-  Task *tail();
-  // Atomically checks whether the list is empty.
+  // Non-atomically retrieves the first task.
+  Task *head() { return _head; }
+  // Non-atomically retrieves the last task.
+  Task *tail() { return _tail; }
+  // Non-atomically checks whether the list is empty.
   bool empty() { return !head(); }
 
   /*
@@ -81,12 +81,6 @@ public:
    * called with interrupts disabled.
    */
   void remove(Task *);
-
-  /*
-   * Like head(), but not atomic.  This is only safe for use in ISRs or in
-   * contexts where interrupts are disabled.  When in doubt, use head().
-   */
-  Task *headNonAtomic() { return _head; }
 
 };
 
