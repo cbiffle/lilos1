@@ -1,0 +1,3 @@
+# High-level board configuration - intended to be included in other Makefiles.
+MMCU=at90usb1286
+F_CPU=16000000
