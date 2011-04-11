@@ -8,6 +8,8 @@ PORT=/dev/tty.usbserial-FTE597U5
 include board/$(BOARD)/Makefile.board
 
 CFLAGS= -Iinclude \
+        -Iboard/$(BOARD)/include \
+        -Imcu/$(MMCU)/include \
         -D__STDC_LIMIT_MACROS \
         -std=gnu++98 \
         -Os \
@@ -31,16 +33,24 @@ clean:
 	-rm -f main_*.elf main_*.hex main_*.map
 	-rm -f *.o
 	-rm -rf build/
+	-rm -rf mcu/*/build/
 	-rm -f liblilos_*.a
 
 build:
 	mkdir -p build/
 
+%/build:
+	mkdir -p $@
 
-liblilos_$(BOARD).a: build/task.o build/usart.o build/time.o build/debug.o
+
+liblilos_$(BOARD).a: build/task.o build/usart.o build/time.o build/debug.o \
+                     mcu/$(MMCU)/build/mcu_usart.o
 	$(AR) rcs $@ $^
 
 build/%.o: src/%.cc build
+	$(GXX) $(CFLAGS) -c -o $@ $<
+
+mcu/$(MMCU)/build/%.o: mcu/$(MMCU)/src/%.cc mcu/$(MMCU)/build
 	$(GXX) $(CFLAGS) -c -o $@ $<
 
 

@@ -13,66 +13,31 @@
 
 namespace lilos {
 
-static TaskList transmitTasks;
-static TaskList receiveTasks;
-
-void usart_init_raw(uint16_t ubrr) {
-  UBRR0H = ubrr >> 8;
-  UBRR0L = ubrr;
-  // The bootloader doesn't reliably reset this to defaults.
-  UCSR0A = 0;
-  UCSR0B = _BV(TXEN0) | _BV(RXEN0)  // Transmitter and receiver on.
-         | _BV(RXCIE0);             // Receive interrupt enabled.
-  UCSR0C = (1 << USBS0)    // 2 stop bits.
-         | (3 << UCSZ00);  // 8 data bits.
-
-}
-
-void usart_send(const uint8_t *src, size_t len) {
-  for (size_t i = 0; i < len; i++) {
-    usart_send(src[i]);
-  }
-}
-
-void usart_send_P(const prog_char *src, size_t len) {
-  for (size_t i = 0; i < len; i++) {
-    usart_send(pgm_read_byte(&src[i]));
-  }
-}
-
-void usart_send(uint8_t b) {
+uint8_t USART::read() {
   ATOMIC {
-    // Enable UDRE interrupt.
-    UCSR0B |= _BV(UDRIE0);
-    send(&transmitTasks, b);
+    if (available()) return readNow();
+
+    return sendVoid(&_receiveTasks);
   }
 }
 
-uint8_t usart_recv() {
-  ATOMIC {
-    if (UCSR0A & _BV(RXC0)) {
-      return UDR0;
-    }
+void USART::write(const uint8_t *src, size_t len) {
+  for (size_t i = 0; i < len; i++) {
+    write(src[i]);
+  }
+}
 
-    return sendVoid(&receiveTasks);
+void USART::write_P(const prog_char *src, size_t len) {
+  for (size_t i = 0; i < len; i++) {
+    write(pgm_read_byte(&src[i]));
+  }
+}
+
+void USART::write(uint8_t b) {
+  ATOMIC {
+    activateTransmission();
+    send(&_transmitTasks, b);
   }
 }
 
 }  // namespace lilos
-
-using namespace lilos;
-
-ISR(USART_UDRE_vect) {
-  Task *sender = transmitTasks.headNonAtomic();
-  if (!sender) {
-    UCSR0B &= ~_BV(UDRIE0);
-  } else {
-    UDR0 = sender->message();
-    answerVoid(sender);
-  }
-}
-
-ISR(USART_RX_vect) {
-  Task *t = receiveTasks.headNonAtomic();
-  if (t) answer(t, UDR0);
-}

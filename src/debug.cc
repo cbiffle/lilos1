@@ -8,21 +8,23 @@
 #include <lilos/debug.hh>
 #include <lilos/usart.hh>
 #include <avr/io.h>
+#include <lilos/board_debug.hh>
 
 namespace lilos {
 
 void debugInit() {
-  usart_init<38400>();
+  debugUsart.initialize(kDebugBaudrate,
+                        USART::DATA_8, USART::PARITY_NONE, USART::STOP_1);
 }
 
 void debugWrite(const char *str) {
   size_t len = strlen(str);
-  usart_send((const uint8_t *) str, len);
+  debugUsart.write((const uint8_t *) str, len);
 }
 
 void debugWrite_P(const prog_char *str) {
   size_t len = strlen_P(str);
-  usart_send_P(str, len);
+  debugUsart.write_P(str, len);
 }
 
 void debugWrite(uint32_t word) {
@@ -39,11 +41,11 @@ void debugWrite(uint32_t word) {
     word <<= 4;
   }
   buf[8] = ' ';
-  usart_send((uint8_t *) buf, 9);
+  debugUsart.write((uint8_t *) buf, 9);
 }
 
 void debugLn() {
-  usart_send('\r');
+  debugUsart.write('\r');
 }
 
 }  // namespace lilos
