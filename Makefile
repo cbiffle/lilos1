@@ -5,6 +5,8 @@ OBJCOPY=avr-objcopy
 DUDE=avrdude
 PORT=/dev/tty.usbserial-FTE597U5
 
+.SECONDARY: # No seriously make stop doing that
+
 include board/$(BOARD)/Makefile.board
 
 CFLAGS= -Iinclude \
