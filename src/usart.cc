@@ -40,4 +40,23 @@ void USART::write(uint8_t b) {
   }
 }
 
+bool USART::senderWaiting() {
+  return _transmitTasks.headNonAtomic() != 0;
+}
+
+uint8_t USART::readAndUnblockSender() {
+  Task *sender = _transmitTasks.headNonAtomic();
+  uint8_t data = sender->message();
+  answerVoid(sender);
+  return data;
+}
+
+bool USART::receiverWaiting() {
+  return _receiveTasks.headNonAtomic() != 0;
+}
+
+void USART::unblockReceiver(uint8_t data) {
+  answer(_receiveTasks.headNonAtomic(), data);
+}
+
 }  // namespace lilos

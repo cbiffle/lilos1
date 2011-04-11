@@ -59,8 +59,14 @@ public:
   void write(const uint8_t *, size_t);
   void write_P(const prog_char *, size_t);
 
-  TaskList &transmitTasks() { return _transmitTasks; }
-  TaskList &receiveTasks() { return _receiveTasks; }
+  /*
+   * These functions are intended for use from interrupt handlers,
+   * but could be appropriated for other purposes....
+   */
+  bool senderWaiting();
+  uint8_t readAndUnblockSender();
+  bool receiverWaiting();
+  void unblockReceiver(uint8_t);
 
 private:
   uint8_t readNow();

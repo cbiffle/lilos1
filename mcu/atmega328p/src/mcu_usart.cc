@@ -74,16 +74,15 @@ bool USART::available() {
 using namespace lilos;
 
 ISR(USART_UDRE_vect) {
-  Task *sender = usart0.transmitTasks().head();
-  if (!sender) {
-    UCSR0B &= ~_BV(UDRIE0);
+  if (usart0.senderWaiting()) {
+    UDR0 = usart0.readAndUnblockSender();
   } else {
-    UDR0 = sender->message();
-    answerVoid(sender);
+    UCSR0B &= ~_BV(UDRIE0);
   }
 }
 
 ISR(USART_RX_vect) {
-  Task *t = usart0.receiveTasks().head();
-  if (t) answer(t, UDR0);
+  if (usart0.receiverWaiting()) {
+    usart0.unblockReceiver(UDR0);
+  }
 }
