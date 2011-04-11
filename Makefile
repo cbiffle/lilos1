@@ -8,6 +8,7 @@ PORT=/dev/tty.usbserial-FTE597U5
 .SECONDARY: # No seriously make stop doing that
 
 include board/$(BOARD)/Makefile.board
+include mcu/$(MMCU)/Makefile.mcu
 
 CFLAGS= -Iinclude \
         -Iboard/$(BOARD)/include \
@@ -46,7 +47,7 @@ build:
 
 
 liblilos_$(BOARD).a: build/task.o build/usart.o build/time.o build/debug.o \
-                     mcu/$(MMCU)/build/mcu_usart.o
+                     $(MCU_OBJS) $(BOARD_OBJS)
 	$(AR) rcs $@ $^
 
 build/%.o: src/%.cc build
