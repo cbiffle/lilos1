@@ -2,16 +2,17 @@ LD=avr-ld
 GXX=avr-g++
 AR=avr-ar
 OBJCOPY=avr-objcopy
-PART=atmega328p
 DUDE=avrdude
 PORT=/dev/tty.usbserial-FTE597U5
+
+include board/$(BOARD)/Makefile.board
 
 CFLAGS= -Iinclude \
         -D__STDC_LIMIT_MACROS \
         -std=gnu++98 \
         -Os \
         -DF_CPU=8000000 \
-        -mmcu=$(PART) \
+        -mmcu=$(MMCU) \
         -fno-threadsafe-statics \
         -fdata-sections -ffunction-sections \
         -fpack-struct \
@@ -19,7 +20,7 @@ CFLAGS= -Iinclude \
         -unsigned-char \
         -ffreestanding
 
-LDFLAGS= -mmcu=$(PART) \
+LDFLAGS= -mmcu=$(MMCU) \
          -L. \
          -Wl,--gc-sections,--relax \
          -Wl,-Map,main.map
@@ -56,5 +57,5 @@ reset:
 	stty -f $(PORT) hupcl
 
 program: main.hex reset
-	$(DUDE) -p m328p -P $(PORT) -c stk500v1 -b 57600 \
+	$(DUDE) -p $(MMCU) -P $(PORT) -c stk500v1 -b 57600 \
 	  -U flash:w:$<
