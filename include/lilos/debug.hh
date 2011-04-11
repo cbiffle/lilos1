@@ -7,6 +7,18 @@
 #ifndef LILOS_DEBUG_HH_
 #define LILOS_DEBUG_HH_
 
+/*
+ * Debug subsystem
+ *
+ * This provides a way to send simple output to a debugging host.  It hides
+ * the specifics of how said output is sent -- while it's often a USART, it
+ * may be a USB connection or a display on some boards.
+ *
+ * The debug subsystem doesn't honor any special #defines, like DEBUG.  If
+ * you want it conditionally enabled, you'll have to conditionally enable
+ * it.  When debugInit hasn't been called all other functions are no-ops.
+ */
+
 #include <stdint.h>
 #include <lilos/pgmspace.hh>
 

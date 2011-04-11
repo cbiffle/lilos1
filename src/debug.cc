@@ -12,22 +12,30 @@
 
 namespace lilos {
 
+static bool _debuggingOn = false;
+
+#define CONDITIONAL if (!_debuggingOn) return;
+
 void debugInit() {
   debugUsart.initialize(kDebugBaudrate,
                         USART::DATA_8, USART::PARITY_NONE, USART::STOP_1);
+  _debuggingOn = true;
 }
 
 void debugWrite(const char *str) {
+  CONDITIONAL;
   size_t len = strlen(str);
   debugUsart.write((const uint8_t *) str, len);
 }
 
 void debugWrite_P(const prog_char *str) {
+  CONDITIONAL;
   size_t len = strlen_P(str);
   debugUsart.write_P(str, len);
 }
 
 void debugWrite(uint32_t word) {
+  CONDITIONAL;
   char buf[9];
   for (int i = 0; i < 8; i++) {
     uint8_t nibble = (word >> 28) & 0xF;
@@ -45,6 +53,7 @@ void debugWrite(uint32_t word) {
 }
 
 void debugLn() {
+  CONDITIONAL;
   debugUsart.write('\r');
 }
 
