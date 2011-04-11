@@ -27,36 +27,49 @@ static Task * volatile _currentTask = 0;
 /*
  * TaskList
  */
-NEVER_INLINE void TaskList::append(Task *task) {
-  if (task->_container) return;
 
-  Task *t = _tail;  // Cache volatile field in a register.
-  task->_prev = t;
-  task->_next = 0;
-  task->_container = this;
-
-  if (t) {
-    t->_next = task;
-  } else {
-    _head = task;
-  }
-  _tail = task;
+Task *TaskList::head() {
+  ATOMIC { return _head; }
 }
 
-void TaskList::remove(Task *task) {
-  if (task->_container != this) return;
+Task *TaskList::tail() {
+  ATOMIC { return _tail; }
+}
 
-  // Cache volatile fields in registers.
-  Task *p = task->_prev, *n = task->_next;
-  if (p) p->_next = n;
-  if (n) n->_prev = p;
+void TaskList::appendAtomic(Task *task) {
+  ATOMIC {
+    if (task->_container) return;
 
-  if (task == _head) _head = n;
-  if (task == _tail) _tail = p;
+    Task *t = _tail;  // Cache volatile field in a register.
+    task->_prev = t;
+    task->_next = 0;
+    task->_container = this;
 
-  task->_container = 0;
-  task->_prev = 0;
-  task->_next = 0;
+    if (t) {
+      t->_next = task;
+    } else {
+      _head = task;
+    }
+    _tail = task;
+  }
+}
+
+void TaskList::removeAtomic(Task *task) {
+  ATOMIC {
+    if (task->_container != this) return;
+
+    // Cache volatile fields in registers.
+    Task *p = task->_prev, *n = task->_next;
+    if (p) p->_next = n;
+    if (n) n->_prev = p;
+
+    if (task == _head) _head = n;
+    if (task == _tail) _tail = p;
+
+    task->_container = 0;
+    task->_prev = 0;
+    task->_next = 0;
+  }
 }
 
 
@@ -91,10 +104,19 @@ Task::Task(main_t entry, uint8_t *stack, size_t stackSize)
 }
 #undef _PUSH
 
+Task *Task::next() {
+  ATOMIC { return _next; }
+}
+
+Task *Task::prev() {
+  ATOMIC { return _prev; }
+}
+
 void Task::detach() {
-  TaskList *c = _container;
+  TaskList *c;
+  ATOMIC { c = _container; }
   if (!c) return;
-  c->remove(this);
+  c->removeAtomic(this);
 }
 
 
@@ -184,15 +206,13 @@ static ALWAYS_INLINE void restoreContext(stack_t sp) {
  */
 
 void schedule(Task *task) {
-  ATOMIC {
-    readyList.append(task);
-  }
+  readyList.appendAtomic(task);
 }
 
 TASK(idleTask, 32) {
   cli();
   while (1) {
-    if (_currentTask->next() || _currentTask->prev()) {
+    if (_currentTask->nextNonAtomic() || _currentTask->prevNonAtomic()) {
       yield();
     } else {
       sleep_enable();
@@ -218,9 +238,15 @@ NORETURN startTasking() {
 }
 
 
-Task *nextTask_interruptsDisabled() {
+Task *nextTask() {
   Task *newTask = _currentTask->next();
   if (!newTask) newTask = readyList.head();
+  return newTask;
+}
+
+Task *nextTask_interruptsDisabled() {
+  Task *newTask = _currentTask->nextNonAtomic();
+  if (!newTask) newTask = readyList.headNonAtomic();
   return newTask;
 }
 
@@ -241,12 +267,7 @@ NEVER_INLINE void yieldTo(Task *next) {
 }
 
 void yield() {
-  Task *newTask;
-  ATOMIC {
-    newTask = _currentTask->next();
-    if (!newTask) newTask = readyList.head();
-  }
-  yieldTo(newTask);
+  yieldTo(nextTask());
 }
 
 Task *currentTask() { return _currentTask; }
@@ -277,7 +298,7 @@ msg_t sendVoid(TaskList *target) {
     Task *next = nextTask_interruptsDisabled();
   
     _currentTask->detach();
-    target->append(_currentTask);
+    target->appendAtomic(_currentTask);
 
     yieldTo(next);
 
@@ -286,9 +307,8 @@ msg_t sendVoid(TaskList *target) {
 }
 
 Task *receive() {
-  Task *sender;
   do {
-    ATOMIC { sender = _currentTask->waiters().head(); }
+    Task *sender = _currentTask->waiters().head();
     if (sender) return sender;
 
     sendVoid(&receiverList);
@@ -301,10 +321,8 @@ void answer(Task *sender, msg_t response) {
 }
 
 void answerVoid(Task *sender) {
-  ATOMIC {
-    sender->detach();
-    schedule(sender);
-  }
+  sender->detach();
+  schedule(sender);
 }
 
 
@@ -337,11 +355,8 @@ void dump1(Task *task, uint8_t indentLevel) {
   }
   debugLn();
 
-  Task *w;
-  ATOMIC { w = task->waiters().head(); }
-  while (w) {
+  for (Task *w = task->waiters().head(); w; w = w->next()) {
     dump1(w, indentLevel + 1);
-    ATOMIC { w = w->next(); }
   }
 }
 
@@ -353,11 +368,10 @@ void taskDump() {
   debugLn();
 
   debugWrite_P(PSTR("All:\r"));
-  Task *t;
-  ATOMIC { t = readyList.head(); }
+  Task *t = readyList.head();
   while (t) {
     dump1(t, 1);
-    ATOMIC { t = t->next(); }
+    t = t->next();
   }
 
   debugWrite_P(PSTR("--- end task dump ---\r"));

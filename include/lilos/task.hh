@@ -56,31 +56,31 @@ class TaskList {
 public:
   TaskList() : _head(0), _tail(0) {}
 
-  // Non-atomically retrieves the first task.
-  Task *head() { return _head; }
-  // Non-atomically retrieves the last task.
-  Task *tail() { return _tail; }
-  // Non-atomically checks whether the list is empty.
+  // Atomically retrieves the first task.
+  Task *head();
+  // Atomically retrieves the last task.
+  Task *tail();
+  // Atomically checks whether the list is empty.
   bool empty() { return !head(); }
 
   /*
    * Ensures that the given Task is in this list.  If the Task was not
    * previously in the list, it becomes the new last element.  If it was already
    * in the list, its position is unchanged.
-   *
-   * This function operates on task links in a non-atomic manner and must be
-   * called with interrupts disabled.
    */
-  void append(Task *);
+  void appendAtomic(Task *);
 
   /*
    * Ensures that the given Task is not in this list.  If the Task was in the
    * list, it is removed; otherwise, nothing changes.
-   *
-   * This function operates on task links in a non-atomic manner and must be
-   * called with interrupts disabled.
    */
-  void remove(Task *);
+  void removeAtomic(Task *);
+
+  /*
+   * Like head(), but not atomic.  This is only safe for use in ISRs or in
+   * contexts where interrupts are disabled.  When in doubt, use head().
+   */
+  Task *headNonAtomic() { return _head; }
 
 };
 
@@ -139,16 +139,21 @@ public:
   bool in(TaskList *tl) { return _container == tl; }
 
   /*
-   * next() and prev() retrieve the next or previous task in the containing
-   * list, respectively.  next() and prev() will return NULL if this Task is
-   * last or first in the list (respectively) or if this Task is not a member
-   * of any list.
-   *
-   * These functions operate on task links in a non-atomic manner and must be
-   * called with interrupts disabled.
+   * next() and prev() atomically retrieve the next or previous task in the
+   * containing list, respectively.  next() and prev() will return NULL if this
+   * Task is last or first in the list (respectively) or if this Task is not a
+   * member of any list.
    */
-  Task *next() { return _next; }
-  Task *prev() { return _prev; }
+  Task *next();
+  Task *prev();
+
+  /*
+   * Like next() and prev(), but not atomic.  These are only safe for use from
+   * ISRs or in contexts where interrupts are disabled.  If in doubt, do not
+   * use.
+   */
+  Task *nextNonAtomic() { return _next; }
+  Task *prevNonAtomic() { return _prev; }
 
   /*
    * Returns a reference to this task's messaging slot.  If the task is blocked
@@ -178,9 +183,6 @@ public:
   /*
    * Removes this Task from its containing list.  If the Task is not a member
    * of any list, nothing changes.
-   *
-   * This function operates on task links in a non-atomic manner and must be
-   * called with interrupts disabled.
    */
   void detach();
 

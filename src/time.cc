@@ -23,12 +23,10 @@ static TaskList timerTaskList;
 TASK(timerTask, 32) {
   Task *me = currentTask();
   while (1) {
-    Task *t;
-    ATOMIC { t = me->waiters().head(); }
+    Task *t = me->waiters().head();
     uint32_t time = ticks();
     while (t) {
-      Task *next;  // Cache this in case we answer and change it.
-      ATOMIC { next = t->next(); }
+      Task *next = t->next();  // Cache this in case we answer and change it.
       uint32_t deadline = *t->message<uint32_t *>();
       // Hack: we assume that no deadline will be 2^30 milliseconds from now.
       if (time - deadline < numeric_limits<int32_t>::max / 2) answerVoid(t);
@@ -44,7 +42,7 @@ void timeInit() {
   TIMSK2 = _BV(OCIE2A);  // interrupt on match
   OCR2A = F_CPU / 1000 / 256 - 1;
 
-  timerTaskList.append(&timerTask);
+  timerTaskList.appendAtomic(&timerTask);
 }
 
 uint32_t ticks() {
@@ -73,6 +71,6 @@ using namespace lilos;
 void TIMER2_COMPA_vect() {
   timerTicks++;
   // Check to see if the timerTask is waiting for us.  If so, unblock it.
-  Task *tt = timerTaskList.head();
+  Task *tt = timerTaskList.headNonAtomic();
   if (tt) answerVoid(tt);
 }
