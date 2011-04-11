@@ -26,7 +26,7 @@ using lilos::debugLn;
  * A trivial message server that controls the debug LED.  Any non-zero message
  * will turn the LED on; zero will turn it off.
  */
-TASK(serverTask, 32) {
+TASK(serverTask, kMinStack) {
   static const lilos::port::Pin led = PIN(B, 5);
   led.setDirection(lilos::port::OUT);
   while (1) {
@@ -39,7 +39,7 @@ TASK(serverTask, 32) {
 /*
  * A task that periodically dumps the state of all tasks to the USART.
  */
-TASK(debugTask, 80) {
+TASK(debugTask, kMinStack + 64) {
   lilos::IntervalTimer timer(1000);
   while (1) {
     lilos::taskDump();
@@ -51,7 +51,7 @@ TASK(debugTask, 80) {
  * A task that sends messages turning the debug LED on and off, while announcing
  * its intent on the USART.
  */
-TASK(flashTask, 64) {
+TASK(flashTask, kMinStack + 16) {
   lilos::IntervalTimer timer(500);
   while (1) {
     debugWrite_P(PSTR("on\r"));
@@ -64,9 +64,9 @@ TASK(flashTask, 64) {
   }
 }
 
-TASK(echoTask, 32) {
+TASK(echoTask, kMinStack) {
   while (1) {
-    lilos::usart_send(lilos::usart_recv());
+    lilos::usart0.write(lilos::usart0.read());
   }
 }
 

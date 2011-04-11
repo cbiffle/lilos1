@@ -11,56 +11,70 @@
 
 #include <lilos/pgmspace.hh>
 #include <lilos/static_assert.hh>
+#include <lilos/task.hh>
 
 namespace lilos {
 
-/*
- * Sets the USART's UBRR clock divider register.  Use this to set the baud rate
- * to values not known at compile time.  (For values that *are* known at
- * compile time, use usart_init, below.)
- */
-void usart_init_raw(uint16_t ubrr);
+// Opaque declaration of hardware USART struct.
+class USARTRegisters;
 
 /*
- * Sets the USART's baud rate to a compile-time constant.  This template
- * compiles to a simple constant load and call to usart_init_raw (above).
- *
- * usart_init incorporates static checks to ensure that the specified baud
- * rate is achievable.  It will fail to compile if the baud rate is too high
- * for the chosen clock frequency, or if the effective baud rate differs from
- * the requested rate by more than 5%.
+ * A USART peripheral.  Each particular type of MCU has static instances of
+ * this class defined in mcu/$(MCU)/include/lilos/mcu_usart.hh.
  */
-template <uint32_t baudrate>
-inline void usart_init() {
-  static const uint32_t ubrr32 = F_CPU / 16 / baudrate - 1;
-  static const uint32_t actualRate = F_CPU / (16 * (ubrr32 + 1));
-  static_assert("Calculated UART rate must fit in 16 bits.",
-      (ubrr32 & 0xFFFF0000) == 0);
-  static_assert("UART effective baud rate error must be under 5%.",
-      (actualRate - baudrate) <= baudrate * 0.05
-      && (actualRate - baudrate) >= -(baudrate * 0.05));
+class USART {
+  USARTRegisters *_reg;
+  TaskList _transmitTasks;
+  TaskList _receiveTasks;
 
-  usart_init_raw(ubrr32);
-}
+public:
+  enum DataBits {
+    DATA_5,
+    DATA_6,
+    DATA_7,
+    DATA_8,
+    DATA_9,
+  };
 
-/*
- * Receives a character from the USART.  May block.
- */
-uint8_t usart_recv();
+  enum Parity {
+    PARITY_NONE,
+    PARITY_EVEN,
+    PARITY_ODD,
+  };
 
-/*
- * Sends a character to the USART.  May block.
- */
-void usart_send(uint8_t);
+  enum StopBits {
+    STOP_1,
+    STOP_2,
+  };
 
-/*
- * These two functions send blocks of data to the USART.  The blocks are not
- * atomic: if other tasks are trying to transmit at the same time, output may
- * get interleaved.
- */
-void usart_send(const uint8_t *, size_t);
-void usart_send_P(const prog_char *, size_t);
+
+  USART(USARTRegisters *reg) : _reg(reg) {}
+
+  void initialize(uint32_t baudrate, DataBits, Parity, StopBits);
+
+  bool available();
+  uint8_t read();
+
+  void write(uint8_t);
+  void write(const uint8_t *, size_t);
+  void write_P(const prog_char *, size_t);
+
+  /*
+   * These functions are intended for use from interrupt handlers,
+   * but could be appropriated for other purposes....
+   */
+  bool senderWaiting();
+  uint8_t readAndUnblockSender();
+  bool receiverWaiting();
+  void unblockReceiver(uint8_t);
+
+private:
+  uint8_t readNow();
+  void activateTransmission();
+};
 
 }  // namespace lilos
+
+#include <lilos/mcu_usart.hh>
 
 #endif  // LILOS_USART_HH_

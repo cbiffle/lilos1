@@ -322,4 +322,5 @@ void taskDump();
   lilos::Task name(name ## Main, name ## Stack, stackSize); \
   NORETURN name ## Main ()
 
+static const size_t kMinStack = 48;
 #endif  // LILOS_TASK_HH_

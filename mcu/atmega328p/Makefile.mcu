@@ -1,0 +1,3 @@
+# MCU configuration - intended to be included in other Makefiles.
+MCU_BUILD=mcu/atmega328p/build
+MCU_OBJS=$(MCU_BUILD)/mcu_usart.o

@@ -8,7 +8,14 @@ include board/$(BOARD)/Makefile.board
 
 PORT=/dev/tty.usbserial-FTE597U5
 
+.SECONDARY: # No seriously make stop doing that
+
+include board/$(BOARD)/Makefile.board
+include mcu/$(MMCU)/Makefile.mcu
+
 CFLAGS= -Iinclude \
+        -Iboard/$(BOARD)/include \
+        -Imcu/$(MMCU)/include \
         -D__STDC_LIMIT_MACROS \
         -std=gnu++98 \
         -Os \
@@ -24,39 +31,47 @@ CFLAGS= -Iinclude \
 LDFLAGS= -mmcu=$(MMCU) \
          -L. \
          -Wl,--gc-sections,--relax \
-         -Wl,-Map,main.map
+         -Wl,-Map,main_$(BOARD).map
 
-all: main.hex
+all: main_$(BOARD).hex
 
 clean:
-	-rm -f main.elf main.hex main.map
+	-rm -f main_*.elf main_*.hex main_*.map
 	-rm -f *.o
 	-rm -rf build/
-	-rm -f liblilos.a
+	-rm -rf mcu/*/build/
+	-rm -f liblilos_*.a
 
 build:
 	mkdir -p build/
 
+%/build:
+	mkdir -p $@
 
-liblilos.a: build/task.o build/usart.o build/time.o build/debug.o
+
+liblilos_$(BOARD).a: build/task.o build/usart.o build/time.o build/debug.o \
+                     $(MCU_OBJS) $(BOARD_OBJS)
 	$(AR) rcs $@ $^
 
 build/%.o: src/%.cc build
 	$(GXX) $(CFLAGS) -c -o $@ $<
 
+mcu/$(MMCU)/build/%.o: mcu/$(MMCU)/src/%.cc mcu/$(MMCU)/build
+	$(GXX) $(CFLAGS) -c -o $@ $<
 
-main.elf: main.o liblilos.a
-	$(GXX) $(LDFLAGS) -o $@ $^ -llilos
+
+main_$(BOARD).elf: main.o liblilos_$(BOARD).a
+	$(GXX) $(LDFLAGS) -o $@ $^ -llilos_$(BOARD)
 
 %.o: %.cc
 	$(GXX) $(CFLAGS) -c -o $@ $^
 
-main.hex: main.elf
+%.hex: %.elf
 	$(OBJCOPY) -O ihex -R .eeprom $< $@
 
 reset:
 	stty -f $(PORT) hupcl
 
-program: main.hex reset
+program: main_$(BOARD).hex reset
 	$(DUDE) -p $(MMCU) -P $(PORT) -c stk500v1 -b 57600 \
 	  -U flash:w:$<
